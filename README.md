@@ -26,6 +26,7 @@ At the same time, local access remains inside an explicit security boundary.
                             ▼
                    Authorized Workspace
 ```
+<img width="2166" height="1498" alt="workbench" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
 
 ## Work with the real local workspace
 
@@ -278,6 +279,8 @@ dsh plugin --profile web add dsh-with-chatgpt
 | [DSH with ChatGPT](https://github.com/BeforeWave/dsh-with-chatgpt) | Complete ChatGPT + DSH development workflow |
 | [Agent Helm Extensions](https://github.com/BeforeWave/agent-helm-extensions) | Browser and other user-facing integrations |
 
+<img width="906" height="1078" alt="dsh-plugin-only" src="https://github.com/user-attachments/assets/44db8e14-202e-4fca-bdfb-bf6ef4c5dbc1" />
+<img width="2166" height="1498" alt="workbench" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
 ## Project Status
 
 Agent Helm is under active development.
