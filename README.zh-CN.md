@@ -4,19 +4,19 @@
 
 # Agent Helm
 
-> **让 ChatGPT 直接进入你的本地开发环境：理解真实项目、修改项目、完成工程任务、指挥你本地的 Coding Agent，同时让所有本地操作始终处于明确的权限和 Sandbox 边界之内。**
+> **让 ChatGPT 真正进入你的本地开发环境。理解项目、直接完成工程工作，并在需要时指挥你本地的 Coding Agent。**
 
-**Agent Helm** 让 ChatGPT 真正能够在你电脑上的本地项目中工作，而不再只能基于你复制进 Conversation 的代码、日志和项目背景进行推理。
+Agent Helm 通过 **Secure MCP** 把 ChatGPT 与你授权的本地项目连接起来。
 
-你可以像平时一样在 ChatGPT 里描述问题、提出修改要求、讨论方案和 Review 结果。
+你仍然在 ChatGPT 里描述问题、讨论方案和检查结果，但不再需要反复复制代码、错误信息和项目背景。ChatGPT 可以直接了解项目当前状态、修改文件、运行工具和命令，并检查实际结果。
 
-ChatGPT 可以连接到你授权的本地项目，理解项目当前的真实状态，按照你的要求修改项目、完成工作，也可以指挥你本地可用的 Coding Agent 继续执行更大的任务，并在之后重新检查实际结果。
-
-这些本地操作在明确的权限范围和 **Sandbox** 中执行，让 ChatGPT 和它调用的本地 Agent 能真正动手，同时不会获得对整台电脑的无限制访问。
+当任务更大或需要持续执行时，ChatGPT 还可以把工作交给你本地的 Coding Agent，完成后再回来继续检查和处理。
 
 ```text
                          ChatGPT
-                  理解 · 推理 · 工作 · 指挥
+                  理解 · 推理 · 工作 · Review
+                            │
+                       Secure MCP
                             │
                             ▼
                         Agent Helm
@@ -25,274 +25,176 @@ ChatGPT 可以连接到你授权的本地项目，理解项目当前的真实状
                直接完成工作        本地 Coding Agent
                     \                /
                      \              /
-                        权限边界
+                      授权的本地项目
                             │
                          Sandbox
-                            │
-                            ▼
-                     授权的 Workspace
 ```
+
+**项目和实际执行环境在你的电脑上。**
+
+ChatGPT 工作时，Agent Helm 会通过 MCP 返回完成当前任务所需的信息，例如相关文件内容、错误信息、项目状态和命令输出。
+
+本地操作基于你授权的项目和权限执行，并受到 Sandbox 保护。需要的安全保护不可用时，相关操作会被拒绝。
 
 <img width="2166" height="1498" alt="workbench" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
 
-## 让 ChatGPT 操作真实的本地项目
+## 快速开始
 
-真正的项目始终在你的电脑上。
-
-使用 Agent Helm 以后，你不需要不断把代码、错误、日志和项目背景复制进 ChatGPT，只为了让它知道当前项目发生了什么。
-
-ChatGPT 可以直接基于你授权的本地 Workspace 理解问题、修改项目、完成任务，并继续检查实际结果。
-
-对于用户来说，体验很简单：
-
-* 在 ChatGPT 里描述你想做什么
-* 让 ChatGPT 理解当前项目
-* 让它直接在项目上完成工作
-* 需要时让它指挥本地 Coding Agent 继续执行
-* 回到同一个 Conversation 继续讨论和 Review
-
-真正重要的区别很简单：
-
-**ChatGPT 面对的是你电脑上项目当前的真实状态，而不是聊天窗口里的一份简化副本。**
-
-## 直接完成工作，也可以指挥本地 Agent
-
-并不是每一个任务都需要启动一个完整的 Coding Agent。
-
-对于明确而集中的工作，ChatGPT 可以直接通过 Agent Helm 完成。
-
-```text
-ChatGPT
-   │
-   ▼
-Agent Helm
-   │
-   ▼
-本地项目
-```
-
-当任务变得更大、需要持续执行，或者更适合交给 Coding Agent 时，ChatGPT 可以发现并使用你本地可用的 Agent，把任务和当前项目上下文交给它继续执行。
-
-ChatGPT 不只是“启动一个 Agent”。
-
-它可以围绕当前项目和当前任务指挥本地 Agent 工作，在需要时继续给出方向，并在 Agent 完成后重新回到真实项目检查结果、继续 Review，或者决定下一步。
-
-```text
-ChatGPT
-   │
-   ├── 理解项目
-   ├── 直接完成工作
-   └── 指挥本地 Agent
-              │
-              ▼
-          Local Agent
-              │
-          持续执行任务
-              │
-              ▼
-        ChatGPT Review
-```
-
-你可以先从 ChatGPT 开始，只在任务真正需要的时候再使用 Coding Agent。
-
-Agent 完成以后，ChatGPT 可以重新读取真实项目中的结果，而不是只相信 Agent 的完成报告。
-
-这样，一个任务可以自然地在几种工作方式之间切换：
-
-**ChatGPT 直接处理 → 本地 Agent 持续执行 → ChatGPT 检查结果并继续工作**
-
-而不需要你自己不断在不同工具之间重新解释项目背景和任务上下文。
-
-## 安全地让 ChatGPT 真正动手
-
-让 ChatGPT 操作本地项目，不应该等于把整台电脑交给它。
-
-Agent Helm 只在你授权的本地工作环境中工作。
-
-ChatGPT 能够访问什么、能够在哪里工作，以及本地操作可以做到什么，都受到明确的权限范围限制。
-
-通过 Agent Helm 使用的本地 Coding Agent，同样处在这套本地工作与权限边界之内。
-
-本地执行进一步受到 **Sandbox** 约束。
-
-```text
-ChatGPT
-   │
-   ▼
-Agent Helm
-   │
-   ├── Authorized Workspace
-   ├── Permission Boundary
-   ├── Local Agent Delegation
-   └── Sandbox
-            │
-            ▼
-        本地项目
-```
-
-这不是简单依赖 Prompt 告诉 ChatGPT“不要访问其他地方”。
-
-真正的限制发生在本地执行层。
-
-在支持的环境中，Agent Helm 会让本地命令运行在 enforcing Sandbox 中。
-
-如果某项操作无法安全执行，同时又没有可用的 enforcing Sandbox，Agent Helm 会默认 **fail closed**，而不是静默退化成无限制执行。
-
-> **ChatGPT 可以真正进入项目工作，也可以指挥本地 Agent 完成任务，但它们能够访问什么、执行什么，仍然由明确的本地权限和 Sandbox 边界决定。**
-
-### 使用的基础组件
-
-Agent Helm 在部分本地能力上使用成熟的开源组件作为实现基础：
-
-| 组件                            | 在 Agent Helm 中的作用                                   | 项目                                                                                                  |
-| ----------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Serena**                    | 提供语义代码理解以及基于 LSP 的项目能力                              | [oraios/serena](https://github.com/oraios/serena)                                                   |
-| **Anthropic Sandbox Runtime** | 为本地命令执行提供 enforcing Sandbox                         | [anthropic-experimental/sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) |
-| **OpenAI tunnel-client**      | 默认用于建立 ChatGPT 与本地 Agent Helm 之间的 Secure MCP Tunnel | [openai/tunnel-client](https://github.com/openai/tunnel-client)                                     |
-
-这些组件是 Agent Helm 使用的实现 backend。
-
-Agent Helm 在它们之上负责定义和管理本地能力边界、Workspace 隔离、权限模型、Coding Agent 委派、Setup 流程以及运行时生命周期。
-
-安全边界也不仅停留在文档描述上。Agent Helm 源码中提供了公开、可复现的 **Security / Conformance Tests** 来验证这些约束。
-
-## 引导式配置
-
-Agent Helm 可能需要少量本地依赖和连接配置，但 Setup 流程会检查当前缺少什么，并引导你完成需要的步骤。
-
-**你不需要自己查找大量安装文档、手工拼环境变量，或者研究每一个底层组件应该如何配置。**
-
-安装 Agent Helm：
+安装并配置 Agent Helm：
 
 ```bash
 npm install -g agent-helm
-```
-
-然后运行：
-
-```bash
 agent-helm setup
 ```
 
-Setup 会检查当前本地环境，并引导你完成 Agent Helm 需要的依赖、权限、Tunnel 连接以及其他配置。
+进入你希望使用的项目：
 
-能够自动完成的步骤可以由 Agent Helm 帮你处理。
+```bash
+cd /path/to/project
+agent-helm init
+agent-helm start
+```
 
-必须由用户授权或者前往外部页面完成的步骤，则会给出明确的下一步操作。
+完成连接后，继续在 ChatGPT 里工作即可。
 
-### Chrome 集成
-
-如果你希望直接从浏览器里的 ChatGPT 使用 Agent Helm：
+浏览器集成：
 
 ```bash
 agent-helm setup chrome
 ```
 
-你也可以直接从 [**Agent Helm Chrome Extension**](https://github.com/BeforeWave/agent-helm-extensions) 开始。
+也可以直接使用 [**Agent Helm Chrome Extension**](https://github.com/BeforeWave/agent-helm-extensions)。
 
-Extension 会检查当前本地环境，并从浏览器中引导你进入同一套 Agent Helm 安装和连接流程。
-
-## Workspace 与日常使用
-
-Setup 配置的是 **Agent Helm 本身**。
-
-你的本地项目需要单独注册为 Workspace。
-
-在项目目录中执行：
-
-```bash
-cd /path/to/workspace
-agent-helm init
-```
-
-也可以直接指定项目：
-
-```bash
-agent-helm init /path/to/workspace
-```
-
-然后启动 Agent Helm：
-
-```bash
-agent-helm start
-```
-
-查看当前运行状态：
+常用命令：
 
 ```bash
 agent-helm status
-```
-
-需要检查环境和连接问题时：
-
-```bash
 agent-helm doctor
-```
-
-停止 Agent Helm：
-
-```bash
 agent-helm stop
 ```
 
-当 Agent Helm 已经启动并连接以后，你仍然像平时一样从 ChatGPT 开始工作。
+## ChatGPT 直接工作
+
+ChatGPT 可以直接通过 Agent Helm：
+
+- 理解当前项目
+- 查找和读取文件
+- 修改内容
+- 运行工具和命令
+- 检查错误和运行结果
+- 验证任务结果
+
+不需要为了让 ChatGPT 理解项目，反复把大量上下文手工复制进 Conversation。
+
+## 使用本地 Coding Agent
+
+较大、耗时或者需要持续执行的任务，可以交给你本地已有的 Coding Agent。
+
+```text
+ChatGPT
+   │
+   ▼
+Agent Helm
+   │
+   ├── 直接完成任务
+   │
+   └── 本地 Coding Agent
+             │
+             ▼
+          持续执行
+             │
+             ▼
+        ChatGPT 检查结果
+```
+
+Agent 完成后，ChatGPT 可以重新检查项目中的实际结果，再继续修改、验证或者进行下一步。
+
+一项工作可以自然地在：
+
+**ChatGPT 直接处理 → 本地 Agent 持续执行 → ChatGPT 检查并继续**
+
+之间切换。
+
+## 本地项目与 ChatGPT 之间会传递什么
+
+项目文件、Git 状态、工具和命令都以你的本地环境为准。
+
+ChatGPT 通过 Agent Helm 工作时，Agent Helm 会通过 MCP 返回完成当前任务所需要的信息，包括：
+
+- 相关文件内容
+- 错误和诊断信息
+- 项目状态
+- Git 信息
+- 命令输出
+- 完成当前任务需要的其他内容
+
+## 安全边界
+
+Agent Helm 在你授权的本地项目范围内工作，文件访问和工程操作受到相应的权限限制。
+
+在支持的环境中，本地命令运行在 Sandbox 中，对文件、命令、环境变量和网络等本地资源的访问进行限制。
+
+需要的安全保护不可用时，相关操作会被拒绝。
+
+通过 Agent Helm 使用的本地 Coding Agent 同样遵循当前项目的工作范围和执行限制。
+
+**在当前测试覆盖范围内未发现安全问题，但仍建议谨慎使用。**
 
 ## Work History
 
-一次真实的开发工作，往往不只发生在一条命令、一个 Conversation 或一个 Agent Session 中。
+Agent Helm Work History 会把一次工作中的 ChatGPT Conversation、本地项目、直接操作和 Agent Session 关联起来。
 
-ChatGPT 可能直接完成任务的一部分，也可能把另一部分交给本地 Agent；本地 Agent 可能继续执行一段时间，而你之后再回到 Conversation 继续讨论。
+你可以查看：
 
-Agent Helm Work History 会把这些工作重新关联起来。
+- 这项工作来自哪个 ChatGPT Conversation
+- 使用的是哪个项目 / Worktree
+- ChatGPT 已经完成了什么
+- 是否使用过本地 Agent
+- 对应的 Agent Session
+- Agent 后续完成了什么
+- 最近发生了什么
 
-```text
-ChatGPT Conversation
-        │
-        ▼
-       Work
-     /      \
-Direct Work  Agent Sessions
+这样，一项持续较久的工作可以随时重新找到并继续处理。
+
+## Chrome Extension
+
+[**Agent Helm Chrome Extension**](https://github.com/BeforeWave/agent-helm-extensions) 提供浏览器里的安装、配置和操作面板，可以管理连接、项目和本地 Agent，并查看当前工作的执行情况。
+
+如果已经安装 Agent Helm，可以运行：
+
+```bash
+agent-helm setup chrome
 ```
 
-你可以随时重新找到：
+完成浏览器连接。
 
-* 这项工作来自哪个 ChatGPT Conversation
-* 使用的是哪个 Workspace / Worktree
-* ChatGPT 已经直接完成了什么
-* 是否把任务交给了本地 Agent
-* 对应的是哪个 Agent Session
-* Agent 后续完成了什么
-* 最近又发生了什么
+## 基础组件
 
-Work History 不是另一份聊天记录，也不只是 Agent Session 列表。
+Agent Helm 的部分能力使用成熟的开源项目：
 
-它连接的是：
-
-**Conversation → Workspace → Direct Work → Agent Sessions → 实际工作历史**
-
-这样，一项工作即使在 ChatGPT 和本地 Agent 之间持续很久，也可以被重新找到、继续、Review 和交接，而不会因为切换工具或离开 Conversation 就失去上下文。
+| 组件 | 用途 | 项目 |
+| --- | --- | --- |
+| **Serena** | 项目理解和语义能力 | [oraios/serena](https://github.com/oraios/serena) |
+| **Anthropic Sandbox Runtime** | 本地命令 Sandbox | [anthropic-experimental/sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) |
+| **OpenAI tunnel-client** | ChatGPT 与本地 Agent Helm 之间的 Secure MCP 连接 | [openai/tunnel-client](https://github.com/openai/tunnel-client) |
 
 ## 相关项目
 
-Agent Helm 可以完全独立使用。
+Agent Helm 可以独立使用。
 
-你不需要提前理解或者安装其他项目。
+| 项目 | 用途 | 链接 |
+| --- | --- | --- |
+| **DSH with ChatGPT** | 让 ChatGPT 配合 DSH Session 持续执行较大的任务 | [DSH with ChatGPT](https://github.com/BeforeWave/dsh-with-chatgpt) |
+| **Agent Helm Extensions** | Chrome Extension 和其他 Agent Helm 使用界面 | [Agent Helm Extensions](https://github.com/BeforeWave/agent-helm-extensions) |
 
-如果你希望在 Agent Helm 之上获得不同的使用方式，可以配合下面两个项目：
+<img width="2164" height="1666" alt="dsh-pure" src="https://github.com/user-attachments/assets/48103763-2897-4df3-94a9-af36df672448" />
 
-| 项目                        | 说明                                                                                               | 链接                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| **DSH with ChatGPT**      | 让 ChatGPT 与 DSH 一起完成更完整的开发工作流。ChatGPT 可以直接处理任务，也可以指挥真实的 DSH Session 持续执行，并在完成后重新回到真实项目继续 Review。 | [DSH with ChatGPT](https://github.com/BeforeWave/dsh-with-chatgpt)           |
-| **Agent Helm Extensions** | 让浏览器里的 ChatGPT 直接进入本地开发环境，并提供 Work 和 Agent Session 的浏览器管理界面。                                     | [Agent Helm Extensions](https://github.com/BeforeWave/agent-helm-extensions) |
-
-<img width="906" height="1078" alt="dsh-plugin-only" src="https://github.com/user-attachments/assets/44db8e14-202e-4fca-bdfb-bf6ef4c5dbc1" />
+> 左下方的 dsh-plugin 是 dsh-with-chatgpt
 
 <img width="2166" height="1498" alt="workbench" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+
+> 右侧是 Chrome Extension 的 panel
 
 ## 项目状态
 
 Agent Helm 正在持续开发中。
-
-它解决的核心问题很简单：
-
-> **让 ChatGPT 直接面对你电脑上的真实项目，自己完成适合直接处理的工作，并在需要时指挥你本地的 Coding Agent 持续执行；与此同时，本地访问始终受到你可以控制的权限和 Sandbox 边界约束。**
