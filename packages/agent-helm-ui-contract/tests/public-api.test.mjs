@@ -32,6 +32,6 @@ test('installer source is derived from the public Agent Helm release', () => {
   const source = agentHelmInstallerSourceForRelease('1.2.3')
   assert.equal(source.macos.version, '1.2.3')
   assert.equal(source.macos.releaseUrl, 'https://github.com/BeforeWave/agent-helm/releases')
-  assert.equal(source.macos.assetName, 'Agent-Helm-1.2.3.pkg')
-  assert.equal(source.macos.downloadUrl, 'https://github.com/BeforeWave/agent-helm/releases/download/v1.2.3/Agent-Helm-1.2.3.pkg')
+  assert.equal(source.macos.assetName, 'Agent-Helm-Installer-1.2.3.pkg')
+  assert.equal(source.macos.downloadUrl, 'https://github.com/BeforeWave/agent-helm/releases/download/v1.2.3/Agent-Helm-Installer-1.2.3.pkg')
 })

@@ -17,7 +17,7 @@ function normalizedInstallerReleaseUrl(value: string): string {
 
 function installerSourceForReleaseUrl(version: string, releaseUrl: string) {
   if (!semanticVersionPattern.test(version)) throw new Error('Invalid Agent Helm installer version')
-  const assetName = `Agent-Helm-${version}.pkg`
+  const assetName = `Agent-Helm-Installer-${version}.pkg`
   return {
     macos: {
       version,
@@ -47,7 +47,7 @@ export async function loadAgentHelmInstallerSource(options: {
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
   let value: unknown
   try {
-    const response = await fetcher(compatibilityUrl, { redirect: 'follow', signal: controller.signal })
+    const response = await fetcher(compatibilityUrl, { redirect: 'follow', signal: controller.signal, credentials: 'omit' })
     if (!response.ok) throw new Error(`Agent Helm compatibility lookup failed: HTTP ${response.status}`)
     value = await response.json() as unknown
   } finally {
@@ -72,5 +72,5 @@ export async function loadAgentHelmInstallerSource(options: {
 export function agentHelmMacosInstallerFilename(version: string, extensionId: string): string {
   if (!chromeExtensionIdPattern.test(extensionId)) throw new Error('Invalid Chrome Extension ID')
   if (!semanticVersionPattern.test(version)) throw new Error('Invalid Agent Helm installer version')
-  return `Agent-Helm-${version}--chrome-${extensionId}.pkg`
+  return `Agent-Helm-Installer-${version}--chrome-${extensionId}.pkg`
 }
