@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "tunnelClient": {
+    "version": "v0.0.13",
+    "releaseUrl": "https://github.com/openai/tunnel-client/releases"
+  },
+  "agentHelm": {
+    "version": "0.1.3",
+    "releaseUrl": "https://github.com/BeforeWave/agent-helm/releases"
+  },
+  "dshWithChatgpt": {
+    "version": "0.1.3",
+    "releaseUrl": "https://github.com/BeforeWave/dsh-with-chatgpt/releases"
+  }
+}
