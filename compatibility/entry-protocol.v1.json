@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 1,
+  "immutable": true,
+  "adapterRpc": {
+    "protocolVersion": 1,
+    "transport": "newline-delimited-json-over-local-socket",
+    "daemonSocketSuffix": ".agent-helm/run/daemon.sock",
+    "adapterMethods": {
+      "health": [],
+      "listWorkspaces": [],
+      "createSession": [
+        "input"
+      ],
+      "listSessions": [
+        "limit?"
+      ],
+      "getSession": [
+        "sessionId",
+        "maxMessages?"
+      ],
+      "resumeSession": [
+        "sessionId"
+      ],
+      "prompt": [
+        "sessionId",
+        "message"
+      ],
+      "cancel": [
+        "sessionId"
+      ]
+    },
+    "coreMethods": {
+      "supervisorHealth": [],
+      "installDependency": [
+        "dependency",
+        "compatibilityChannel?"
+      ],
+      "reconcile": [],
+      "configureTunnel": [
+        "tunnelSetup"
+      ],
+      "listWorkspaces": [],
+      "registerWorkspace": [
+        "path",
+        "title?"
+      ],
+      "setCoreEnabled": [
+        "enabled"
+      ],
+      "setLocalMcpEnabled": [
+        "enabled"
+      ],
+      "setAgentDelegationEnabled": [
+        "agentId",
+        "enabled"
+      ],
+      "shutdownDaemon": [],
+      "getExternalUserAccess": [],
+      "setExternalUserAccess": [
+        "access"
+      ],
+      "getLocalMcpConnection": [],
+      "getChatSession": [
+        "sessionId"
+      ],
+      "listChatSessionSummaryPage": [
+        "cursor?",
+        "limit?"
+      ],
+      "getChatSessionSummary": [
+        "sessionId"
+      ],
+      "findChatSessionSummaryByUrl": [
+        "url"
+      ],
+      "getChatSessionTimeline": [
+        "sessionId"
+      ],
+      "getChatSessionActivity": [
+        "sessionId"
+      ],
+      "getChatSessionDelegations": [
+        "sessionId"
+      ],
+      "bindChatSession": [
+        "chatSessionId",
+        "openAiSessionId",
+        "message",
+        "task"
+      ],
+      "bindChatUrl": [
+        "chatSessionId",
+        "url"
+      ]
+    },
+    "dshConsumesCoreMethods": [
+      "supervisorHealth",
+      "reconcile",
+      "installDependency",
+      "configureTunnel",
+      "shutdownDaemon",
+      "setCoreEnabled",
+      "setLocalMcpEnabled",
+      "setExternalUserAccess",
+      "getLocalMcpConnection",
+      "listChatSessionSummaryPage",
+      "getChatSessionSummary",
+      "getChatSessionTimeline",
+      "getChatSessionActivity",
+      "getChatSessionDelegations"
+    ]
+  },
+  "dshHttp": {
+    "statusPath": "/api/dsh-with-chatgpt/status",
+    "sessionsPath": "/api/dsh-with-chatgpt/sessions"
+  },
+  "chromeNative": {
+    "hostName": "com.beforewave.agent_helm",
+    "methods": {
+      "probe": [],
+      "supervisorHealth": [],
+      "reconcile": [],
+      "installDependency": [
+        "dependency"
+      ],
+      "configureTunnel": [
+        "tunnelSetup"
+      ],
+      "listWorkspaces": [],
+      "chooseAndRegisterWorkspace": [],
+      "setDaemonEnabled": [
+        "enabled"
+      ],
+      "setCoreEnabled": [
+        "enabled"
+      ],
+      "setLocalMcpEnabled": [
+        "enabled"
+      ],
+      "setAgentDelegationEnabled": [
+        "agentId",
+        "enabled"
+      ],
+      "getExternalUserAccess": [],
+      "setExternalUserAccess": [
+        "access"
+      ],
+      "listChatSessionSummaryPage": [
+        "cursor?",
+        "limit?"
+      ],
+      "getChatSessionSummary": [
+        "sessionId"
+      ],
+      "findChatSessionSummaryByUrl": [
+        "url"
+      ],
+      "getChatSessionTimeline": [
+        "sessionId"
+      ],
+      "getChatSessionDelegations": [
+        "sessionId"
+      ],
+      "bindChatSession": [
+        "sessionId",
+        "openAiSessionId",
+        "message",
+        "task"
+      ],
+      "bindChatUrl": [
+        "sessionId",
+        "url"
+      ]
+    },
+    "extensionConsumesMethods": [
+      "probe",
+      "supervisorHealth",
+      "installDependency",
+      "configureTunnel",
+      "listWorkspaces",
+      "chooseAndRegisterWorkspace",
+      "setDaemonEnabled",
+      "setLocalMcpEnabled",
+      "setAgentDelegationEnabled",
+      "getExternalUserAccess",
+      "setExternalUserAccess",
+      "listChatSessionSummaryPage",
+      "getChatSessionSummary",
+      "findChatSessionSummaryByUrl",
+      "getChatSessionTimeline",
+      "bindChatUrl"
+    ]
+  },
+  "dtoFingerprints": {
+    "packages/agent-helm/src/agents/adapter.ts#AgentCapabilities": "cd0d918bf5c9ad432e7d5cbd17ddbf7638203a6b9b3696a3ebd8073cf9bc12ae",
+    "packages/agent-helm/src/agents/adapter.ts#AdapterWorkspaceRef": "30537e48aba8c2d0f0dc5c946a96be75054237dcff6929fee184d4e0b915679d",
+    "packages/agent-helm/src/agents/adapter.ts#SessionSummary": "8d6174db30e343d6ca58bf097a5dd44d0fa079adb71aad09db4664aa4dc6e2cd",
+    "packages/agent-helm/src/agents/adapter.ts#SessionMessage": "83e0a313e1a2a0907087529518484870829026deb768e0621f32db0c154f18c2",
+    "packages/agent-helm/src/agents/adapter.ts#SessionDetail": "4975af9b68b0c881fe763b03bae6381c745423ee41b16ef00497d6c01c43215c",
+    "packages/agent-helm/src/agents/adapter.ts#CreateSessionInput": "06432bfc8a7dba0e3a9477d22cb383001e0eb37d017332d8cd4a350ff769af42",
+    "packages/agent-helm/src/agents/adapter.ts#AgentAdapter": "16834646a474e4a1de8a4f6af50be36aeaf99d1472ba37562d045bba0325ddd4",
+    "packages/agent-helm/src/agents/rpc.ts#AdapterDescriptor": "b7c0f875164d3f5944767f77e08dbdf26bd6f50d6a0f15e372541bc46c8f847a",
+    "packages/agent-helm/src/agents/rpc.ts#LocalMcpConnection": "1f460e3b12f46d523d43b4065a1c2f5a2ac48e26ca852ebcef4b4cc9debbc86a",
+    "packages/agent-helm/src/agents/rpc.ts#WireMessage": "c9cdf672eb5668b94850d01fab1ffc005980ab46fb1ab8c40c3d028a06721faf",
+    "packages/agent-helm/src/runtime/dependencies.ts#CoreDependencyName": "5ba0696f43eca7c5991330f84177d48dcaac9b30477848975ec823affb62d27f",
+    "packages/agent-helm/src/runtime/tunnel-setup.ts#TunnelSetupInput": "8514914fbd6136e7b21c40576b43b821b1cca36129cc9819a0bc643eb67080bc",
+    "packages/agent-helm/src/runtime/status.ts#SupervisorStatus": "64cee1fa2f749e5ad72368d23546b44b9aa714246b9db77bb3145df7a0cdf22e",
+    "packages/agent-helm/src/mcp/access.ts#ExternalUserAccess": "7a5cfab4d20cac9ca70fccfb7b05e1757e11ff4d3f8450b04f5819abe7a1aab2",
+    "packages/agent-helm/src/workspaces/registry.ts#WorkspaceRef": "d52e6eefbbd08713d170487f159fa2e08d47ed56f9584e899345cb457c813245",
+    "packages/agent-helm/src/sessions/store.ts#ConversationIntent": "71d4506a8c588d22d5689f073ee7106350105271ec3499b39cb141aef37c2ebc",
+    "packages/agent-helm/src/sessions/store.ts#BoundConversationIntent": "0ce8a8ecdc8b73034df2eaa8d7fcdcb1124520c29b924ee03e46d8e70977c2bf",
+    "packages/agent-helm/src/sessions/store.ts#ChatSession": "7a864c10f7a01ca07e8df1bbe68f50cade6eab53726f4b314eec93bd62cb9f8d",
+    "packages/agent-helm/src/sessions/store.ts#DelegatedSession": "797a145454d25bdd909ecb34d78c1085ab2dac5d9e178e5345eb9903f750b154",
+    "packages/agent-helm/src/sessions/service.ts#ChatSessionActivity": "e068b708af8a97e1dd895eda71c66f5901fa07312ea8dc550263fb66c4ce2460",
+    "packages/agent-helm/src/sessions/service.ts#ChatSessionSummary": "b3deb9f00f8c669da440e4bab13bbfe495032ae90d74c0e6a062a37179dce1ab",
+    "packages/agent-helm/src/sessions/service.ts#ChatSessionSummaryPage": "0e34567bb7e962e800e7bbeee1ea5ab50c5dff8a924b51e7f6426a9da35debc5",
+    "packages/agent-helm/src/sessions/service.ts#ChatSessionTimelineItem": "c42772ada9a10ddbcae17ba120a719355a13293aa023bde2164583e0c01ba66a",
+    "packages/agent-helm/src/cli.ts#ChromeNativeRequest": "ae1a4df7e8861b8c6b3654a985690f1a46942d9da6ea02e371dd7d18abe3d75e",
+    "packages/agent-helm/src/cli.ts#ChromeNativeResponse": "65528a532f9dee33e8d6031d03ece666a3e34a8ae8007e165186a06c4cfef115",
+    "packages/agent-helm-extensions/chrome-extension/src/adapters/chrome/NativeMessagingTransport.ts#NativeDaemonProbe": "0a1963b01870f861177b61e5f44ca1863885de6b1e7dbdb65bdb0a4a94c44b64"
+  },
+  "surfaceFingerprints": {
+    "packages/agent-helm/src/agents/rpc.ts#AdapterRpcClient": {
+      "methods": {
+        "configureTunnel": "e5fcce39c065fa55df51236e4aa1c768967c7800921c02b7bf4d6e8b6b6314da",
+        "getChatSession": "008d45c551812607524b0a21fd4791d52c5d5063a12eb0c19e71d2616ff6cf29",
+        "getChatSessionActivity": "29388d0e72b5eb96b0c310e03b689cb3560e764fb7d0e718da185c5fa6a74267",
+        "getChatSessionDelegations": "4d8dadeeca9eee497c62d4c906a325821d039631980ec08d21f60584fbc936b9",
+        "getChatSessionSummary": "7fddcb2d0886e1f8500e26e741d41076269ed698d7ada12533eea198d6167575",
+        "getChatSessionTimeline": "e210292a1ad3b8ab5dbfeb99c6ad32dbdb569c53617d564cb4f4078f8cd47f4c",
+        "getExternalUserAccess": "379c0f45511f9345b712f4c0a042df3b73bf50d427b28372a0a358ea8835380a",
+        "getLocalMcpConnection": "66054d7828ae7c98a3aecef28c9a6cb30bf6558651242b5b009f072c442fa15d",
+        "installDependency": "5cda7023cc50e8e2f5129d365fe1ee1afc0da722be92448838a84d9fc114e897",
+        "listChatSessionSummaryPage": "f2981e8293184d625d331f1b5ba825191ada8d888035248ed16a48d626312752",
+        "reconcile": "2ed4e8b3d4d3d695ba173df9ff07c96a3f25a082b7ade79a49c76c9514c477c1",
+        "setCoreEnabled": "ad68538205a62a5f1c7df3c8ab8828ff580c904fad1db0b081d06b0cc84147c1",
+        "setExternalUserAccess": "9c6622435365fa1aa929cbeac6402989cce3e1ea31f7721440cca49531735c1e",
+        "setLocalMcpEnabled": "713e59bbac55213605cc84874d834b78cb05fd8c2cda50447db06677947e1201",
+        "shutdownDaemon": "db41369ebecfb542d9a0333a0c9b2f8fe4abecea0f921fa524a50ddc45bc6ac7",
+        "supervisorHealth": "e1be63bcb8fe8ca6e8bdd8c39abfe68c880c747c450665cfe2828fc5a89c8a32"
+      }
+    },
+    "packages/agent-helm/src/agents/rpc.ts#ControlRpcClient": {
+      "methods": {
+        "bindChatSession": "3d7bc5c24d0bc9ddc5680dc96a2485e427d357ca467ba7cbfc4788ba67e1ad7a",
+        "bindChatUrl": "951fd21c271f5787e7cb803c7def745beb560028ac01cf63578a1d69c9cd32d6",
+        "configureTunnel": "e5fcce39c065fa55df51236e4aa1c768967c7800921c02b7bf4d6e8b6b6314da",
+        "findChatSessionSummaryByUrl": "3273dd75ac321757f77cbb66ff65eb2948736de4cc99ab287dd3d52c9ac53887",
+        "getChatSessionDelegations": "4d8dadeeca9eee497c62d4c906a325821d039631980ec08d21f60584fbc936b9",
+        "getChatSessionSummary": "7fddcb2d0886e1f8500e26e741d41076269ed698d7ada12533eea198d6167575",
+        "getChatSessionTimeline": "e210292a1ad3b8ab5dbfeb99c6ad32dbdb569c53617d564cb4f4078f8cd47f4c",
+        "getExternalUserAccess": "379c0f45511f9345b712f4c0a042df3b73bf50d427b28372a0a358ea8835380a",
+        "installDependency": "5cda7023cc50e8e2f5129d365fe1ee1afc0da722be92448838a84d9fc114e897",
+        "listChatSessionSummaryPage": "f2981e8293184d625d331f1b5ba825191ada8d888035248ed16a48d626312752",
+        "listWorkspaces": "dceb09fb893e1b5c9c3ebeca20b52120f2c086dae7d24882d541191700e31d59",
+        "reconcile": "2ed4e8b3d4d3d695ba173df9ff07c96a3f25a082b7ade79a49c76c9514c477c1",
+        "registerWorkspace": "3501362062ebe21055cfc76d5e9bc944c15fd938b9ffc1e511616e9acc60a3c3",
+        "setAgentDelegationEnabled": "31aa344e287f81525f4159303d9d4a251a83e49f9eaa25e5ce9104e7e29cfc61",
+        "setCoreEnabled": "ad68538205a62a5f1c7df3c8ab8828ff580c904fad1db0b081d06b0cc84147c1",
+        "setExternalUserAccess": "9c6622435365fa1aa929cbeac6402989cce3e1ea31f7721440cca49531735c1e",
+        "setLocalMcpEnabled": "713e59bbac55213605cc84874d834b78cb05fd8c2cda50447db06677947e1201",
+        "shutdownDaemon": "db41369ebecfb542d9a0333a0c9b2f8fe4abecea0f921fa524a50ddc45bc6ac7",
+        "supervisorHealth": "e1be63bcb8fe8ca6e8bdd8c39abfe68c880c747c450665cfe2828fc5a89c8a32"
+      }
+    },
+    "packages/agent-helm/src/cli.ts#ChromeNativeControlBridge": {
+      "methods": {
+        "bindChatSession": "38af1d439ca99c758bea8f5321d53fd6817a1151af09d73e284e57553af4e4b3",
+        "bindChatUrl": "46f26229acb7114b90f7f68f6053248fc9dbede795edc0bbc4ed4d194500ad69",
+        "chooseAndRegisterWorkspace": "4cfadb82a629649d4b41f2e9a2d84f3af14c759f8fb13680c35ff395467de0c0",
+        "configureTunnel": "e5fcce39c065fa55df51236e4aa1c768967c7800921c02b7bf4d6e8b6b6314da",
+        "findChatSessionSummaryByUrl": "bb267cc11dc3a415aaa98d9ba7b03f34e67da34c73915ee235b2be89e2fed334",
+        "getChatSessionDelegations": "a10b462eaee947222b47f74697c24c3fc9acd64cd53ea1188eb2e103705d67f8",
+        "getChatSessionSummary": "4e25cde743a42007ccf359ee3ec495897666f0adfeba2948f38578129b7fc1ef",
+        "getChatSessionTimeline": "7673a3baef40202317f81ec74ab007bd8808013482477ee1008044847bb98ca5",
+        "getExternalUserAccess": "379c0f45511f9345b712f4c0a042df3b73bf50d427b28372a0a358ea8835380a",
+        "installDependency": "46976b51ceb0ab0a038b39d1976305afc0f665229081e80293a079757adcde1d",
+        "listChatSessionSummaryPage": "0dca87e914393ec8ca0f1c2747318083e77e2f1f6c9f43e6f980558014cccff9",
+        "listWorkspaces": "ffa734c060d828763357e56696f3f53341384c5990e29bee63d89e45c2696dc0",
+        "probe": "8d41b4396e728e24a4850f3ee6e87cb2469bf96903abc58f5f5f742fb13742b5",
+        "reconcile": "2ed4e8b3d4d3d695ba173df9ff07c96a3f25a082b7ade79a49c76c9514c477c1",
+        "setAgentDelegationEnabled": "31aa344e287f81525f4159303d9d4a251a83e49f9eaa25e5ce9104e7e29cfc61",
+        "setCoreEnabled": "ad68538205a62a5f1c7df3c8ab8828ff580c904fad1db0b081d06b0cc84147c1",
+        "setDaemonEnabled": "e58d4b7c770c4c9d7a2387b28b6a407c6556afd5ccf87991cc528c80e0d9095e",
+        "setExternalUserAccess": "9c6622435365fa1aa929cbeac6402989cce3e1ea31f7721440cca49531735c1e",
+        "setLocalMcpEnabled": "713e59bbac55213605cc84874d834b78cb05fd8c2cda50447db06677947e1201",
+        "supervisorHealth": "e1be63bcb8fe8ca6e8bdd8c39abfe68c880c747c450665cfe2828fc5a89c8a32"
+      }
+    },
+    "packages/agent-helm-extensions/chrome-extension/src/adapters/chrome/NativeMessagingTransport.ts#NativeMessagingTransport": {
+      "methods": {
+        "daemonProbe": "19fb837fb32f94c374a2fef5918871cdcdd0e097ca09e657c934695ed37f76c1",
+        "probe": "542a2f2217c029de4c19f429eb27cca8b3265941cae58da74ccb61d9064f68e2",
+        "request": "c6e5af5bed38f42a649bd32bb3d316579b48b798112874d0f0939a19155e92a5"
+      }
+    }
+  }
+}
