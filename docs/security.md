@@ -72,7 +72,7 @@ The default execution policy is conservative:
 
 The selected Workspace or work path is the primary filesystem scope.
 
-Additional host access must be explicitly granted by configuration.
+Additional host access must be explicitly granted by configuration, except for bounded read-only runtime support needed to execute tools that were already part of the Core daemon's captured runtime environment.
 
 Agent Helm performs static command and path checks where behavior can be determined reliably.
 
@@ -103,11 +103,19 @@ Direct execution receives Agent Helm-managed `HOME` and temporary directories in
 
 Host environment access is name-scoped.
 
-`PATH` is retained for executable resolution, while additional host variables must be explicitly allowed.
+`PATH` is retained for executable resolution, while additional host variables must be explicitly allowed. Agent Helm captures the daemon's trusted `PATH` runtime topology rather than treating command-time `PATH` changes as new authority.
+
+Captured `PATH` directories and their canonical equivalents are read-only runtime authority. Agent Helm may also add bounded read-only authority for audited runtime-manager/package-manager layouts and native or shebang dependencies required by those executables. This runtime authority never becomes writable authority, and `filesystem.deny` remains higher priority.
 
 Agent Helm-managed values such as `HOME` and `TMPDIR` are supplied by the runtime.
 
+The Core-owned Agent Helm CLI is removed from the workspace command `PATH`, so `command_execute` cannot recursively invoke the local control plane through a bare `agent-helm` command.
+
+Agent Helm's own user configuration is not part of default workspace command authority. Direct command execution does not receive implicit read or write access to that control configuration.
+
 `execution.filesystem.allowFromEnv` can derive additional filesystem access from explicitly selected host environment variables when those values resolve to valid absolute paths.
+
+For the local control plane, the managed daemon run directory is owner-only on Unix-like systems, and the managed Unix control socket is created with owner-only permissions. Custom socket parent directories are not broadly chmodded by Agent Helm.
 
 ## Network policy
 

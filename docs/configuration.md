@@ -51,8 +51,14 @@ When an execution context selects a registered Workspace, the effective Workspac
 ```yaml
 execution:
   filesystem:
+    readOnly:
+      - ~/.cache/shared-reference
     allow:
       - ~/.cache/shared-tools
+
+  runtime:
+    roots:
+      - ~/.local/share/project-toolchain
 
   network:
     allow:
@@ -79,12 +85,18 @@ workspaces:
 
     execution:
       filesystem:
+        readOnly:
+          - ../shared-reference
         allow:
           - ../shared-generated
         allowFromEnv:
           - GOMODCACHE
         deny:
           - private
+
+      runtime:
+        roots:
+          - runtime-local
 
       commands:
         deny:
@@ -138,9 +150,13 @@ execution:
   commandWorkers: 4
 
   filesystem:
+    readOnly: []
     allow: []
     allowFromEnv: []
     deny: []
+
+  runtime:
+    roots: []
 
   commands:
     allow: []
@@ -162,9 +178,11 @@ The defaults add no extra host filesystem, environment, or network grants and ke
 
 The selected Workspace or work path is the primary execution scope.
 
-`filesystem.allow` adds explicitly configured paths.
+`filesystem.readOnly` adds explicitly configured paths as read-only authority.
 
-`filesystem.deny` removes access to configured paths.
+`filesystem.allow` adds explicitly configured read/write paths.
+
+`filesystem.deny` removes access to configured paths and remains restrictive when it overlaps either read-only or read/write authority.
 
 At Workspace level, relative paths are resolved against the selected working copy so the policy follows the base checkout or managed Worktree.
 
@@ -173,9 +191,13 @@ Example:
 ```yaml
 execution:
   filesystem:
+    readOnly:
+      - ~/.cache/shared-reference
     allow:
       - ~/.cache/shared-tools
 ```
+
+Read-only roots enlarge readable authority without becoming writable authority. They are enforced separately from `filesystem.allow`.
 
 Use `allowFromEnv` when a toolchain exposes a required host path through an environment variable:
 
@@ -191,6 +213,25 @@ A selected environment variable can contribute filesystem authority only when it
 Missing or empty values add no authority.
 
 Agent Helm-managed variables such as `HOME` and `TMPDIR` are not intended to be used to derive additional host filesystem grants.
+
+### Runtime roots
+
+`execution.runtime.roots` adds explicit read-only runtime/toolchain roots that commands may need in order to start or load dependencies.
+
+Runtime roots are separate from project/data filesystem authority: they do not become writable, and they do not behave like `filesystem.allow`.
+
+At Workspace level, relative runtime roots are resolved against the selected working copy.
+
+Example:
+
+```yaml
+execution:
+  runtime:
+    roots:
+      - runtime-local
+```
+
+Ordinary executables already reachable through the daemon-captured `PATH` normally do not need to be repeated here. Use explicit runtime roots only for additional runtime layouts that are not covered by the captured runtime substrate.
 
 ### Commands
 
@@ -324,6 +365,8 @@ workspaces:
 ```
 
 Serena is currently used as the semantic provider.
+
+An empty `semantic.languages` list means Agent Helm does not predeclare a language set; the provider may auto-detect the project languages. Explicit language entries are useful when auto-detection is undesirable or ambiguous.
 
 Provider-specific files such as:
 

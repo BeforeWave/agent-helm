@@ -113,6 +113,14 @@ The complete host environment is not copied into child processes. `PATH` is reta
 
 Command text cannot authorize its own Sandbox bypass.
 
+### Runtime substrate
+
+Core captures a bounded runtime substrate from the daemon environment. This separates executable/toolchain read authority from project data authority: captured `PATH` directories, audited runtime-manager/package-manager roots, and required native/shebang closure remain read-only and are composed with the selected execution context at command time.
+
+Runtime discovery is cached persistently under `~/.agent-helm/runtime-cache/`. On startup, unchanged captured `PATH` entries reuse their cached scan, while changed entries are rescanned. Cache reuse is conditional on the relevant filesystem and executable-resolution fingerprints still matching; it is not an unconditional reuse of old authority.
+
+When Core explicitly installs or changes a managed runtime dependency, it refreshes the runtime substrate so newly available runtime state can be adopted through the same bounded discovery path.
+
 ## Project intelligence
 
 Agent Helm keeps project-intelligence configuration independent from a specific provider.
@@ -127,7 +135,9 @@ belong to Agent Helm configuration.
 
 Serena is currently used as the semantic provider.
 
-Agent Helm creates and manages provider runtimes for authorized working copies and translates the effective Agent Helm configuration into provider-specific settings.
+Agent Helm creates provider runtimes lazily for authorized working copies and translates the effective Agent Helm configuration into provider-specific settings. Runtime identity is work-path aware, so separate working copies do not silently share one provider instance.
+
+Idle semantic runtimes are retained for reuse for a bounded period and may be retired under idle-time or pressure policy; active runtimes are not evicted while semantic work is in flight. Shutdown and semantic-disable paths drain provider runtimes through the same owned lifecycle.
 
 The public MCP contract remains owned by Agent Helm.
 

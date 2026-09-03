@@ -62,6 +62,8 @@ It should not implicitly widen direct command authority.
 
 When diagnosing semantic-provider problems, use `agent-helm doctor` and the provider-related status information exposed by the runtime.
 
+Provider availability and project language-server availability are separate checks. For example, Serena can be present while a project still lacks a language server executable required by the detected language. Those language-server/toolchain executables must be discoverable from the environment used by Core (for Go, this commonly includes `gopls`).
+
 ### Coding Agent failure
 
 A local Coding Agent integration can be unavailable or fail independently of direct Agent Helm operations.
@@ -75,6 +77,8 @@ Tunnel or MCP transport interruption should be treated separately from Core exec
 A transport error does not by itself imply that a previously requested local command succeeded or failed.
 
 Clients should rely on explicit MCP results rather than infer execution success from connection state.
+
+For a command already expected to run long enough to exceed an MCP/gateway request window, the safer operational pattern is to surface the exact host command and required working directory/environment instead of repeatedly retrying it through MCP. A 502 after an expected long-running command can be a transport timeout rather than a command-level result. By contrast, an isolated 502 on an ordinary short request may be transient and should only be retried in a bounded way.
 
 ## Restart and recovery
 
@@ -142,12 +146,15 @@ The current black-box suite covers externally visible invariants including:
 * `context_setup` behavior;
 * conversation/context ownership isolation;
 * real command execution through MCP;
+* nested command-byte preservation through the public command surface;
 * authorized file creation and inspection;
+* default isolation of Agent Helm control configuration from command execution;
 * rejection of selected out-of-workspace access;
 * rejection of selected destructive commands;
 * output-schema conformance;
 * invalid inputs, tools, contexts, and transport sessions;
 * concurrent command execution;
+* graceful daemon termination on the tested restart path;
 * the tested service restart and reconnect path;
 * continued use of the tested pre-restart execution context after that recovery path.
 
@@ -167,6 +174,7 @@ Repository-level tests also cover narrower contracts around areas such as:
 * Sandbox readiness and policy combinations;
 * Workspace and Worktree isolation;
 * daemon and runtime-host lifecycle;
+* host-dependent runtime substrate behavior such as real PATH/runtime-manager/native-toolchain topology;
 * tunnel planning and observability;
 * installed CLI and release artifacts;
 * Chrome native-host and setup integration;
@@ -174,7 +182,7 @@ Repository-level tests also cover narrower contracts around areas such as:
 
 Overlap between test layers is intentional.
 
-Narrow tests help identify the source of a failure, while black-box tests verify that the built product still behaves correctly from the outside.
+Narrow tests help identify the source of a failure, while the canonical installed-package black-box owns behavior that can be stated purely through the public MCP/service contract. Host-topology-specific acceptance remains an internal repository verification layer rather than becoming another public test interface.
 
 ## Running the checks
 
