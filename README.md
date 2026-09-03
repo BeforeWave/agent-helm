@@ -80,7 +80,7 @@ Then enter the project you want to use:
 
 ```bash id="6qw150"
 cd /path/to/project
-agent-helm init
+agent-helm workspace add
 agent-helm start
 ```
 
@@ -164,7 +164,7 @@ It associates the current ChatGPT conversation with the corresponding local work
 This README focuses on Agent Helm's primary value and usage. More detailed technical documentation is available here:
 
 * [Architecture](./docs/architecture.md) — Components and runtime architecture
-* [Reliability & Black-box Testing](./docs/reliability.md) — Reliability design and end-to-end black-box verification
+* [Reliability & Verification](./docs/reliability.md) — Reliability design and end-to-end black-box verification
 * [Security Model](./docs/security.md) — Workspaces, execution permissions, sandboxing, and security boundaries
 * [Configuration](./docs/configuration.md) — Configuration files, Workspaces, network access, and capability settings
 
