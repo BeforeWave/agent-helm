@@ -1,14 +1,30 @@
 # Configuration
 
-For normal installation, start with:
+For normal installation and setup, start with:
 
 ```bash
 agent-helm setup
 ```
 
-`agent-helm setup` checks the semantic provider, installs the manifest-pinned tunnel client when needed, guides tunnel credentials, checks Sandbox readiness, and reports whether the installation is ready to start.
+`agent-helm setup` checks the local environment and prepares the components required by the configured Agent Helm features.
 
-Manual configuration is available when you need explicit Workspace, capability, execution, or semantic policy.
+Manual configuration is available when you need explicit Workspace, capability, execution, network, or semantic policy.
+
+## Register a Workspace
+
+To register the current project with Agent Helm:
+
+```bash
+cd /path/to/project
+agent-helm workspace add
+```
+
+A Workspace represents a local project that Agent Helm is allowed to use.
+
+Workspace registration and Workspace-specific policy are related but separate concerns:
+
+* `agent-helm workspace add` registers a project for use by Agent Helm;
+* `workspaces[]` in the user configuration is used when you need explicit persistent policy such as execution rules, semantic settings, or a configured Worktree root.
 
 ## Configuration source
 
@@ -18,15 +34,17 @@ Agent Helm has one user-scoped configuration file:
 ~/.config/agent-helm/config.yml
 ```
 
-Repo-local `.agent-helm/config.yml` files are not configuration sources. Workspace-specific policy belongs under the corresponding `workspaces[]` entry in the user config.
+Repo-local `.agent-helm/config.yml` files are not configuration authorities.
 
-The effective host configuration is resolved in this order:
+Workspace-specific policy belongs under the corresponding `workspaces[]` entry in the user configuration.
+
+The effective host configuration is resolved from:
 
 1. built-in defaults;
 2. `~/.config/agent-helm/config.yml`;
-3. explicit launcher/runtime overrides.
+3. supported launcher or runtime overrides.
 
-When an execution context selects a registered Workspace, Agent Helm then applies that Workspace's nested `execution` and `semantic` settings to the selected base checkout or Worktree.
+When an execution context selects a registered Workspace, the effective Workspace-specific `execution` and `semantic` settings are applied to the selected base checkout or managed Worktree.
 
 ## A practical configuration
 
@@ -35,6 +53,7 @@ execution:
   filesystem:
     allow:
       - ~/.cache/shared-tools
+
   network:
     allow:
       - registry.npmjs.org
@@ -42,11 +61,13 @@ execution:
 
 mcp:
   maxAnswerChars: 150000
+
   external:
     command: true
     semantic: true
     read_only: false
     delegate: true
+
   native:
     semantic: true
     delegate: false
@@ -64,9 +85,11 @@ workspaces:
           - GOMODCACHE
         deny:
           - private
+
       commands:
         deny:
           - npm publish
+
       network:
         allow:
           - api.example.com
@@ -79,27 +102,35 @@ workspaces:
       respectGitignore: true
 ```
 
-Keep the global section small. Put project-specific grants and restrictions on the relevant Workspace entry.
+Keep global grants narrow.
+
+Put project-specific access and restrictions on the relevant Workspace entry when possible.
 
 ## Workspaces
 
-A Workspace entry supports:
+A configured Workspace entry supports:
 
-| Field | Purpose |
-| --- | --- |
-| `path` | Authorized project root. Required. |
-| `title` | Human-readable project name. |
-| `worktreeBasePath` | Root under which Agent Helm may create or reuse managed linked Worktrees. |
-| `execution` | Workspace-specific filesystem, command, environment, and network policy. |
-| `semantic` | Workspace-specific semantic code-intelligence settings. |
+| Field              | Purpose                                                                  |
+| ------------------ | ------------------------------------------------------------------------ |
+| `path`             | Authorized project root.                                                 |
+| `title`            | Human-readable Workspace name.                                           |
+| `worktreeBasePath` | Root under which managed linked Worktrees may be created or reused.      |
+| `execution`        | Workspace-specific filesystem, command, environment, and network policy. |
+| `semantic`         | Workspace-specific project-intelligence settings.                        |
 
-For simple registration, `agent-helm init` can add the current project to Agent Helm's managed runtime state. Use `workspaces[]` when you need persistent per-project policy or a configured Worktree root.
+For ordinary project registration:
 
-A Workspace entry cannot configure daemon, HTTP, tunnel, MCP capability ceilings, `allowUnsandboxed`, or command-worker count. Those remain user-level authority.
+```bash
+agent-helm workspace add
+```
+
+Use an explicit `workspaces[]` entry when the project requires persistent per-Workspace policy or a configured Worktree root.
+
+Workspace-level configuration cannot raise user-level authority such as daemon settings, HTTP binding, tunnel configuration, MCP capability ceilings, `allowUnsandboxed`, or command-worker count.
 
 ## Execution policy
 
-The top-level `execution` section controls local command authority.
+The top-level `execution` section controls direct local command authority.
 
 ```yaml
 execution:
@@ -125,15 +156,28 @@ execution:
     allowLocalBinding: false
 ```
 
-The defaults add no extra host grants, disable local TCP binding, and keep unsandboxed fallback disabled.
+The defaults add no extra host filesystem, environment, or network grants and keep unsandboxed fallback disabled.
 
 ### Filesystem
 
-The selected Workspace/work path is the primary execution scope.
+The selected Workspace or work path is the primary execution scope.
 
-`filesystem.allow` adds paths; `filesystem.deny` removes access. At Workspace level, relative paths are resolved against the selected execution working copy, so the same rule follows the base checkout or managed Worktree.
+`filesystem.allow` adds explicitly configured paths.
 
-`filesystem.allowFromEnv` is useful for toolchain directories such as language caches:
+`filesystem.deny` removes access to configured paths.
+
+At Workspace level, relative paths are resolved against the selected working copy so the policy follows the base checkout or managed Worktree.
+
+Example:
+
+```yaml
+execution:
+  filesystem:
+    allow:
+      - ~/.cache/shared-tools
+```
+
+Use `allowFromEnv` when a toolchain exposes a required host path through an environment variable:
 
 ```yaml
 execution:
@@ -142,13 +186,17 @@ execution:
       - GOMODCACHE
 ```
 
-The named variable is also made visible to the child environment. If it is set, every path in its platform-delimited value must be absolute and canonicalizable. Missing or empty values add no filesystem authority. Agent Helm-managed variables such as `HOME` and `TMPDIR` cannot be used to derive host filesystem grants.
+A selected environment variable can contribute filesystem authority only when its value can be resolved as valid absolute host paths according to the runtime's path validation rules.
+
+Missing or empty values add no authority.
+
+Agent Helm-managed variables such as `HOME` and `TMPDIR` are not intended to be used to derive additional host filesystem grants.
 
 ### Commands
 
-`commands.allow` and `commands.deny` use normalized command rules. Workspace rules inherit user-level rules; deny rules remain additive.
+`commands.allow` and `commands.deny` constrain direct command execution.
 
-Use command restrictions for explicit policy such as:
+Example:
 
 ```yaml
 execution:
@@ -158,9 +206,15 @@ execution:
       - git clean
 ```
 
+Command policy should be treated as an additional restriction layer rather than as a replacement for filesystem, network, environment, or Sandbox enforcement.
+
+Workspace command restrictions are combined with user-level policy, and deny rules remain restrictive.
+
 ### Environment
 
-Host environment access is name-scoped:
+Host environment access is name-scoped.
+
+Example:
 
 ```yaml
 execution:
@@ -168,37 +222,57 @@ execution:
     allow:
       - CI
       - NODE_ENV
+
     deny:
       - AWS_SECRET_ACCESS_KEY
 ```
 
-Agent Helm supplies managed execution values for `HOME` and temporary directories. `PATH` is retained for executable lookup; the complete daemon environment is not copied into commands.
+Agent Helm supplies managed execution values for `HOME` and temporary directories.
+
+`PATH` is retained for executable resolution.
+
+The complete daemon environment is not copied automatically into child commands.
 
 ### Network
+
+Example:
 
 ```yaml
 execution:
   network:
     allow:
       - registry.npmjs.org
+
     deny:
       - blocked.example.com
+
     allowLocalBinding: false
 ```
 
-`allowLocalBinding` controls local TCP listeners separately from outbound destinations and is disabled by default.
+Outbound network destinations are controlled separately from local TCP listener creation.
 
-Workspace network settings inherit user-level allow/deny rules and may override `allowLocalBinding` for that Workspace.
+`allowLocalBinding` is disabled by default.
+
+Workspace network settings are resolved together with user-level network policy.
 
 ### Unsandboxed fallback
 
-`execution.allowUnsandboxed` is user-level only and defaults to `false`.
+`execution.allowUnsandboxed` is user-level only and defaults to:
 
-When enabled, it permits only the limited fallback described in the [Security Model](./security.md). It should not be treated as a general "disable security" switch.
+```yaml
+execution:
+  allowUnsandboxed: false
+```
+
+When enabled, it permits only the fallback behavior explicitly supported by the Agent Helm execution backend.
+
+It is not a general "disable security" switch.
+
+See the [Security Model](./security.md) for the security implications.
 
 ## MCP capabilities
 
-The `mcp` section defines the fixed capability ceiling exposed by Core.
+The `mcp` section defines the maximum capability surface exposed by Agent Helm Core.
 
 ```yaml
 mcp:
@@ -215,15 +289,17 @@ mcp:
     delegate: false
 ```
 
-External runtime UI controls may reduce this surface but cannot raise it above the configured ceiling.
+External runtime UI controls may reduce this surface.
 
-Native MCP intentionally has no generic command capability.
+They cannot raise it above the configured ceiling.
 
-These settings are user-level and cannot be overridden per Workspace.
+Native MCP intentionally does not expose generic direct command authority.
+
+MCP capability ceilings are user-level settings and cannot be raised by Workspace configuration.
 
 ## Semantic configuration
 
-Semantic settings are provider-neutral:
+Semantic settings are provider-neutral.
 
 ```yaml
 semantic:
@@ -232,13 +308,39 @@ semantic:
   respectGitignore: true
 ```
 
-A Workspace can add its own `languages` and `ignoredPaths`, and can override `respectGitignore`.
+Workspace-specific semantic settings can be placed under:
 
-Serena is currently the semantic provider, but `.serena/project.yml` and `.serena/project.local.yml` are not Agent Helm configuration authorities. Put project semantic settings under `workspaces[].semantic` instead.
+```yaml
+workspaces:
+  - title: example
+    path: ~/Workspace/example
+
+    semantic:
+      languages:
+        - typescript
+      ignoredPaths:
+        - generated/**
+      respectGitignore: true
+```
+
+Serena is currently used as the semantic provider.
+
+Provider-specific files such as:
+
+```text
+.serena/project.yml
+.serena/project.local.yml
+```
+
+are not Agent Helm configuration authorities.
+
+Put Agent Helm project-intelligence policy in Agent Helm configuration instead.
 
 ## Daemon, HTTP, and tunnel
 
-These sections are advanced host-level settings:
+These sections control advanced host-level behavior.
+
+Example:
 
 ```yaml
 daemon:
@@ -255,23 +357,33 @@ tunnel:
   healthListenAddr: 127.0.0.1:3458
 ```
 
-The HTTP host is restricted to loopback configuration. MCP endpoints use bearer-token authentication.
+The supported HTTP host configuration is restricted to loopback.
 
-For tunnel installation and credentials, prefer `agent-helm setup` rather than manually managing secret material in the YAML file.
+MCP HTTP endpoints use bearer-token authentication.
+
+For tunnel installation and credentials, prefer:
+
+```bash
+agent-helm setup
+```
+
+instead of manually managing secret material in the YAML file.
 
 ## Validate changes
 
-After changing configuration, use:
+After changing configuration:
 
 ```bash
 agent-helm doctor
 agent-helm status
 ```
 
-For installation or dependency problems, rerun:
+For installation or dependency setup problems:
 
 ```bash
 agent-helm setup
 ```
 
-Configuration parsing is strict: unsupported fields and invalid authority combinations are rejected instead of being silently ignored.
+Agent Helm configuration parsing is strict.
+
+Unsupported fields and invalid authority combinations are rejected rather than silently ignored.
