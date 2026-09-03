@@ -4,100 +4,93 @@
 
 # Agent Helm
 
-> **Let ChatGPT directly understand and operate your local development environment, and direct local Coding Agents to carry out longer-running tasks when needed.**
+> **Bring ChatGPT in your browser into your local development environment.**
 
-**Agent Helm** connects ChatGPT to your local development environment.
+**Agent Helm** lets you keep using ChatGPT the way you already do, while giving it direct access to the real projects on your machine.
 
-You continue to describe problems, discuss approaches, and review results in ChatGPT, but you no longer need to repeatedly copy code, errors, and project context into the conversation. ChatGPT can work directly against the real project: understand code, edit files, run commands, inspect diagnostics, and verify actual results.
+ChatGPT can understand the project, find files, edit code, run commands, inspect diagnostics, and check build, test, and execution results — without you constantly copying code, errors, and project context into the conversation.
 
-For focused engineering tasks, ChatGPT can complete the work directly. For tasks that require substantial editing, building, testing, or continued execution, ChatGPT can first understand the project and the goal, then direct a local Coding Agent to carry out the work and review the actual code, Git diff, and test results afterward.
+When a task needs more execution power, ChatGPT can also hand the work off to a local coding agent already connected to Agent Helm.
 
-```text
-                         ChatGPT
-                            │
-                  Understand and operate
-                     the real project
-                            │
-                ┌───────────┴───────────┐
-                │                       │
-            Work directly         Local Coding Agent
-                │                       │
-                │                Continued execution
-                │                       │
-                └───────────┬───────────┘
-                            ▼
-                    Review actual results
-```
+Once the agent is done, ChatGPT can come back to the real project, inspect the code, Git diff, and test results, and continue from there.
 
 <img width="2166" height="1498" alt="Agent Helm" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
 
-## Why Agent Helm
+## Let ChatGPT Work Directly with Your Local Project
 
-### Work Against the Real Project
+ChatGPT no longer has to work from a small slice of code pasted into a chat. It can work against the real project on your machine.
 
-ChatGPT works with the actual project on your computer, not just a small set of code snippets copied into a chat.
+Depending on the task, it can:
 
-It can inspect relevant files and code structure, diagnostics and Git state, run tools and commands, and continue working based on real engineering results.
+* Understand the project structure and relevant context
+* Find and read files
+* Edit code and configuration
+* Inspect diagnostics and Git state
+* Run commands and development tools
+* Check build, test, and execution results
 
-### Work Directly or Direct a Coding Agent
+A lot of work that previously required manually collecting context, pasting outputs, and going back and forth can now happen directly against the real project.
 
-Not every task needs a Coding Agent.
+## Use Local Coding Agents When Needed
 
-Focused changes can be completed directly by ChatGPT, while larger tasks can be handed to a local Coding Agent for continued execution.
+Not every task needs a coding agent.
 
-Both modes can naturally be used within the same piece of work.
+Focused work can be handled directly by ChatGPT.
 
-### Verify Real Results
+For tasks that involve substantial changes, builds, tests, or longer-running execution, ChatGPT can hand the work off to a local coding agent after it already understands the project and the task.
 
-Agent Helm does more than send a task away for execution.
+When the agent finishes, ChatGPT can inspect the project again, review the code, diff, diagnostics, command output, and test results, and decide what to do next.
 
-ChatGPT can continue reading the modified code, Git diff, diagnostics, command output, and test results, then determine whether the task was actually completed.
+The same piece of work can naturally move through:
 
-### Keep Work Context Clear
+**ChatGPT works directly → a local agent continues the task → ChatGPT reviews the result**
 
-Each piece of work is associated with an explicit local project and execution context.
+## Check the Real Results
 
-When Worktrees or local Coding Agents are involved, Agent Helm keeps the relationship between the Conversation, project, and Agent Session so the work can be found and continued later.
+Agent Helm does more than hand a task off and wait for a text response.
 
-### Clear Boundaries for Local Execution
+ChatGPT can inspect the actual state left behind after execution, including:
 
-Your projects and actual execution environment remain on your computer.
+* Modified files
+* Git diff
+* Diagnostics
+* Command output
+* Build results
+* Test results
 
-Agent Helm limits local access according to authorized Workspaces, capabilities, and permissions. If an operation requires Sandbox protection and that protection cannot be established safely, the operation is rejected.
-
-See [Security Model](./docs/security.md) for the full security model.
+It can then keep editing and validating based on what actually happened, rather than treating an agent's summary as the final source of truth.
 
 ## Quick Start
 
 Install Agent Helm:
 
-```bash
+```bash id="0f20as"
 npm install -g agent-helm
 ```
 
-Run Setup:
+Run setup:
 
-```bash
+```bash id="l0m918"
 agent-helm setup
 ```
 
-`agent-helm setup` is the recommended configuration entry point. It handles the environment checks and connection setup required to run Agent Helm.
+`agent-helm setup` handles the environment checks and connection setup required to run Agent Helm.
 
 Then enter the project you want to use:
 
-```bash
+```bash id="6qw150"
 cd /path/to/project
 agent-helm init
 agent-helm start
 ```
 
-Once connected, return to ChatGPT and start working directly against that project.
+Once connected, go back to ChatGPT in your browser and start working directly with that project.
 
 ### Chrome Extension
 
-If you want to handle installation, connection, and day-to-day management from the browser:
+If you prefer to handle installation, connection, and day-to-day management from the browser:
 
-```bash
+```bash id="tsjl3d"
 agent-helm setup chrome
 ```
 
@@ -105,52 +98,74 @@ You can also use the [Agent Helm Chrome Extension](https://github.com/BeforeWave
 
 ### Common Commands
 
-```bash
+```bash id="ftr835"
 agent-helm status
 agent-helm doctor
 agent-helm stop
 ```
 
-## Designed for Real Development Work
-
-Agent Helm is designed for more than running a single command. Its goal is to let ChatGPT participate reliably in real software development workflows.
-
-A piece of work can include:
-
-* ChatGPT understanding the project and locating the problem
-* Editing code directly and verifying the result
-* Creating or using an isolated Worktree
-* Directing a local Coding Agent to carry out larger tasks
-* Continuing to adjust the implementation based on execution results
-* Reviewing the final code, diff, diagnostics, and test results
-* Finding the same work later and continuing from where it left off
-
-Agent Helm maintains the project and work context required across these steps instead of treating every operation as an unrelated one-off call.
-
 ## Work History
 
-Agent Helm can associate a **ChatGPT Conversation, local project, Worktree, direct operations, and Agent Sessions** as one piece of work.
+Agent Helm can associate a **ChatGPT conversation, local project, worktree, direct ChatGPT operations, and agent sessions** as one piece of work.
 
-This means a task can move between direct ChatGPT changes and continued Coding Agent execution while still remaining easy to find later, inspect, and continue.
+You can come back later and see:
 
-A fuller work-management interface is available through the [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions) and other Agent Helm Extensions.
+* Which ChatGPT conversation the work came from
+* Which project / worktree was used
+* What ChatGPT did locally
+* Whether a local coding agent was used
+* Which agent session was associated with the work
+* What happened most recently
 
-## Easier Product Entry Points
+Even when a task moves back and forth between ChatGPT and a local agent, it does not have to turn into several disconnected pieces of work.
 
-Agent Helm can be used directly or through higher-level product integrations.
+A fuller interface for browsing and managing this history is available through the [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions).
 
-| Project                                                                      | Purpose                                                                                                         |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| [Agent Helm Extensions](https://github.com/BeforeWave/agent-helm-extensions) | Install, connect, and manage Agent Helm through browser extensions                                              |
-| [DSH with ChatGPT](https://github.com/BeforeWave/dsh-with-chatgpt)           | Let ChatGPT operate the local environment directly and direct DSH to carry out longer-running tasks when needed |
+## Local Projects and Security
+
+Your projects and execution environment remain on your machine.
+
+ChatGPT receives the local information needed for the current task, such as relevant files, project structure, diagnostics, Git state, command output, and test results.
+
+What it can access, which capabilities it can use, and which operations it can execute are determined by the currently authorized Workspace, capabilities, and permissions.
+
+When ChatGPT performs local operations directly, Agent Helm provides the local permission and sandbox boundary. If an operation requires sandbox protection and that protection cannot be established safely, the operation is rejected.
+
+When work is handed off to a local coding agent, that agent runs under the permissions and sandbox model of its corresponding integration.
+
+See the [Security Model](./docs/security.md) for the full security model.
+
+## Use Agent Helm Through Different Product Integrations
+
+Agent Helm can be used on its own or through product integrations that fit into existing workflows.
+
+### DSH with ChatGPT
+
+[DSH with ChatGPT](https://github.com/BeforeWave/dsh-with-chatgpt) brings Agent Helm into DSH.
+
+ChatGPT in your browser can work directly with your local project and hand tasks off to native DSH Sessions when needed. DSH also gets a lightweight view for seeing the project, local actions, and work history associated with ChatGPT.
+
+<img width="2164" height="1666" alt="DSH with ChatGPT" src="https://github.com/user-attachments/assets/48103763-2897-4df3-94a9-af36df672448" />
+
+> The `dsh-plugin` entry in the lower-left is DSH with ChatGPT.
+
+### Agent Helm Chrome Extension
+
+The [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions) provides a browser-based installation and management experience.
+
+It associates the current ChatGPT conversation with the corresponding local work, so you can see the active project, worktree, ChatGPT's local actions, connected coding agents, and agent sessions directly from the browser.
+
+<img width="2166" height="1498" alt="Agent Helm Chrome Extension" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+
+> The panel on the right is the Agent Helm Chrome Extension Side Panel.
 
 ## Documentation
 
-This README focuses on Agent Helm's primary value and usage. More detailed technical documentation is maintained separately:
+This README focuses on Agent Helm's primary value and usage. More detailed technical documentation is available here:
 
 * [Architecture](./docs/architecture.md) — Components and runtime architecture
 * [Reliability & Black-box Testing](./docs/reliability.md) — Reliability design and end-to-end black-box verification
-* [Security Model](./docs/security.md) — Workspaces, execution permissions, Sandbox, and security boundaries
+* [Security Model](./docs/security.md) — Workspaces, execution permissions, sandboxing, and security boundaries
 * [Configuration](./docs/configuration.md) — Configuration files, Workspaces, network access, and capability settings
 
 ## Core Components
@@ -160,5 +175,9 @@ Agent Helm uses established open-source projects for several core capabilities:
 | Component                     | Purpose                                                    | Project                                                                                             |
 | ----------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | **Serena**                    | Project understanding and semantic capabilities            | [oraios/serena](https://github.com/oraios/serena)                                                   |
-| **Anthropic Sandbox Runtime** | Local command Sandbox                                      | [anthropic-experimental/sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) |
+| **Anthropic Sandbox Runtime** | Local command sandbox                                      | [anthropic-experimental/sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) |
 | **OpenAI tunnel-client**      | Secure MCP connection between ChatGPT and local Agent Helm | [openai/tunnel-client](https://github.com/openai/tunnel-client)                                     |
+
+## Project Status
+
+Agent Helm is under active development.
