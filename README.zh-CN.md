@@ -82,7 +82,7 @@ agent-helm setup
 
 ```bash id="es423m"
 cd /path/to/project
-agent-helm init
+agent-helm workspace add
 agent-helm start
 ```
 
@@ -166,7 +166,7 @@ Agent Helm 可以独立使用，也可以通过不同的产品入口接入现有
 README 只介绍 Agent Helm 的主要价值和使用方式。更完整的技术说明见：
 
 * [Architecture](./docs/architecture.md) — 组件与运行架构
-* [Reliability & Black-box Testing](./docs/reliability.md) — 可靠性设计和端到端黑盒验证
+* [Reliability & Verification](./docs/reliability.md) — 可靠性设计和端到端黑盒验证
 * [Security Model](./docs/security.md) — Workspace、执行权限、Sandbox 和安全边界
 * [Configuration](./docs/configuration.md) — 配置文件、Workspace、Network 和能力配置
 
