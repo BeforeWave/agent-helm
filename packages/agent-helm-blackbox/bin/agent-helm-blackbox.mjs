@@ -2,7 +2,7 @@
 
 import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -59,20 +59,22 @@ function terminateProcessTree(child) {
 }
 
 async function waitForExit(child, timeoutMs = 10_000) {
-  if (!child || child.exitCode !== null) return
-  await new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      if (child.exitCode === null) {
-        if (process.platform !== 'win32' && child.pid) {
-          try { process.kill(-child.pid, 'SIGKILL') } catch {}
-        } else {
-          try { child.kill('SIGKILL') } catch {}
-        }
-      }
-      resolve()
-    }, timeoutMs)
-    child.once('exit', () => { clearTimeout(timer); resolve() })
-  })
+  if (!child || child.exitCode !== null) return { forced: false }
+  const exited = await Promise.race([
+    new Promise((resolve) => child.once('exit', () => resolve(true))),
+    new Promise((resolve) => setTimeout(() => resolve(false), timeoutMs)),
+  ])
+  if (exited || child.exitCode !== null) return { forced: false }
+  if (process.platform !== 'win32' && child.pid) {
+    try { process.kill(-child.pid, 'SIGKILL') } catch {}
+  } else {
+    try { child.kill('SIGKILL') } catch {}
+  }
+  await Promise.race([
+    new Promise((resolve) => child.once('exit', resolve)),
+    new Promise((resolve) => setTimeout(resolve, 2_000)),
+  ])
+  return { forced: true }
 }
 
 async function freePort() {
@@ -464,7 +466,19 @@ try {
   check('command_execute runs inside the selected MCP workspace', pwd.isError !== true && commandResult(pwd)?.return_code === 0 && commandResult(pwd)?.stdout?.trim() === '.' && commandResult(pwd)?.cwd === '.', resultDetail(pwd))
 
   const echo = await call('command_execute', { context_id: contextId, command: 'echo AGENT_HELM_MCP_BLACKBOX', purpose: 'Verify ordinary MCP command execution' })
-  check('command_execute returns real command output', echo.isError !== true && commandResult(echo)?.return_code === 0 && commandResult(echo)?.stdout?.trim() === 'AGENT_HELM_MCP_BLACKBOX', resultDetail(echo))
+  let heredocBang
+  if (process.platform !== 'win32') {
+    const heredocBangCommand = "node --input-type=module <<'NODE'\nif (!'abc'.includes('z')) process.stdout.write('heredoc-bang-ok')\nNODE"
+    heredocBang = await call('command_execute', { context_id: contextId, command: heredocBangCommand, purpose: 'Verify nested shell command bytes survive the public command_execute path' })
+  }
+  check(
+    'command_execute returns real output and quoted heredoc preserves literal exclamation through command_execute',
+    echo.isError !== true
+      && commandResult(echo)?.return_code === 0
+      && commandResult(echo)?.stdout?.trim() === 'AGENT_HELM_MCP_BLACKBOX'
+      && (process.platform === 'win32' || (heredocBang?.isError !== true && commandResult(heredocBang)?.return_code === 0 && commandResult(heredocBang)?.stdout?.trim() === 'heredoc-bang-ok')),
+    process.platform === 'win32' ? resultDetail(echo) : resultDetail(echo) + ' | heredoc=' + resultDetail(heredocBang),
+  )
 
   const stat = await call('command_execute', { context_id: contextId, command: 'stat probe.txt', purpose: 'Verify authorized workspace file access through MCP' })
   check('command_execute can inspect an authorized workspace file', stat.isError !== true && commandResult(stat)?.return_code === 0, resultDetail(stat))
@@ -476,7 +490,24 @@ try {
   check('command_execute can remove a workspace file', remove.isError !== true && commandResult(remove)?.return_code === 0, resultDetail(remove))
 
   const outside = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(outsideFile)}`, purpose: 'Verify MCP workspace read boundary' }, { validate: false })
-  check('command_execute rejects a direct read outside MCP execution authority', outside.isError === true && errorCode(outside) === 'shell_path_not_allowed', errorCode(outside) ?? '')
+  const configReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+  const configRead = await call('command_execute', { context_id: contextId, command: configReadCommand, purpose: 'Verify Agent Helm control configuration is not command-readable by default' })
+  const originalConfig = readFileSync(configFile, 'utf8')
+  const configWriteCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+  const configWrite = await call('command_execute', { context_id: contextId, command: configWriteCommand, purpose: 'Verify Agent Helm control configuration is not command-writable by default' })
+  check(
+    'command_execute enforces workspace and Agent Helm control-config boundaries',
+    outside.isError === true
+      && errorCode(outside) === 'shell_path_not_allowed'
+      && configRead.isError !== true
+      && commandResult(configRead)?.return_code === 0
+      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configRead)?.stdout?.trim() ?? '')
+      && configWrite.isError !== true
+      && commandResult(configWrite)?.return_code === 0
+      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configWrite)?.stdout?.trim() ?? '')
+      && readFileSync(configFile, 'utf8') === originalConfig,
+    'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' read=' + resultDetail(configRead) + ' write=' + resultDetail(configWrite),
+  )
 
   const destructive = await call('command_execute', { context_id: contextId, command: 'git reset --hard HEAD~1', purpose: 'Verify MCP destructive command guardrail' }, { validate: false })
   check('command_execute exposes the destructive-command guardrail through MCP', destructive.isError === true && errorCode(destructive) === 'destructive_command_denied', errorCode(destructive) ?? '')
@@ -548,11 +579,11 @@ try {
 
   const preRestartSessionId = transport.sessionId
   terminateProcessTree(child)
-  await waitForExit(child)
+  const restartStop = await waitForExit(child)
   child = spawnBaseTarget()
   await waitForHealth(mcpUrl, child, stderr)
   const recoveredTools = await client.listTools()
-  check('pre-restart MCP client recovers without reinitializing', sameNames(new Set(recoveredTools.tools.map((tool) => tool.name)), expectedTools))
+  check('pre-restart MCP client recovers after graceful SIGTERM without reinitializing', restartStop.forced === false && sameNames(new Set(recoveredTools.tools.map((tool) => tool.name)), expectedTools))
   check('stateless restart recovery preserves the original MCP transport session id', typeof preRestartSessionId === 'string' && transport.sessionId === preRestartSessionId)
   const recoveredCommand = await client.callTool({
     name: 'command_execute',
@@ -577,6 +608,7 @@ try {
 } finally {
   await client?.close().catch(() => {})
   terminateProcessTree(child)
-  await waitForExit(child)
+  const finalStop = await waitForExit(child)
   rmSync(scratch, { recursive: true, force: true })
+  if (finalStop.forced) throw new Error('Agent Helm black-box target required SIGKILL during cleanup')
 }

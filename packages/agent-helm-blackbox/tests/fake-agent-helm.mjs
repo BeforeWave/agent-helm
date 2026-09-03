@@ -169,6 +169,7 @@ function protocol() {
       const command = String(input.command ?? '')
       if (command === 'pwd') return commandOutput('.\n')
       if (command === 'echo AGENT_HELM_MCP_BLACKBOX') return commandOutput('AGENT_HELM_MCP_BLACKBOX\n')
+      if (command.includes('heredoc-bang-ok')) return commandOutput('heredoc-bang-ok\n')
       if (command === 'echo AGENT_HELM_MCP_BLACKBOX_RESTART') return commandOutput('AGENT_HELM_MCP_BLACKBOX_RESTART\n')
       if (command.startsWith('echo AGENT_HELM_MCP_BLACKBOX_PARALLEL_')) return commandOutput(command.slice(5) + '\n')
       if (command === 'stat probe.txt') return commandOutput('probe.txt\n')
@@ -176,6 +177,8 @@ function protocol() {
         if (workspaceInsideProtectedConfigDir) return toolError('filesystem_write_denied')
         return commandOutput('')
       }
+      if (command.includes('fs.readFileSync') && command.includes(configFile)) return commandOutput('denied:EPERM\n')
+      if (command.includes('fs.writeFileSync') && command.includes(configFile)) return commandOutput('denied:EPERM\n')
       if (command.startsWith('cat ')) return toolError('shell_path_not_allowed')
       if (command === 'git reset --hard HEAD~1') return toolError('destructive_command_denied')
     }
