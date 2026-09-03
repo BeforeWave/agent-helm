@@ -1,100 +1,185 @@
 # Architecture
 
-Agent Helm is the local control layer between ChatGPT and an authorized development environment. It owns the public MCP contract, workspace authority, local execution, semantic code intelligence, and connections to local Coding Agents.
+Agent Helm connects ChatGPT in the browser to an authorized local development environment.
+
+It provides the stable MCP contract used by ChatGPT, keeps local work scoped to explicit Workspaces and execution contexts, runs direct local operations through its execution backend, provides project intelligence, and connects to local Coding Agent integrations when work is delegated.
 
 ## System shape
 
+Agent Helm has two main browser-facing paths:
+
 ```text
-ChatGPT
-   │
-   │ Secure MCP
-   ▼
-Agent Helm Core
-   ├── Workspace + execution-context authority
-   ├── Command execution + Sandbox
-   ├── Semantic code intelligence
-   ├── Work / conversation correlation
-   └── Local Agent registry
-            │
-            │ local adapter RPC
-            ▼
-      Native Coding Agents
+ChatGPT in the browser
+        │
+        │ Managed tunnel / Secure MCP
+        ▼
+ Agent Helm Core
+        │
+        ├── Authorized local projects
+        ├── Command execution
+        ├── Project intelligence
+        └── Local Coding Agent integrations
+
+
+Agent Helm Chrome Extension
+        │
+        │ Native Messaging
+        ▼
+ Agent Helm Core
 ```
 
-The Chrome Extension and DSH integrations are product interfaces around the same Core. They do not replace Core as the authority for workspaces, MCP capabilities, or direct command execution.
+The Chrome Extension is a browser-side product interface. It does not use the local MCP HTTP endpoint as a browser data plane.
 
-## Core ownership
+DSH with ChatGPT and other Agent integrations connect to the same local Core through their supported integration contracts.
+
+## Core responsibilities
 
 The long-running Agent Helm Core owns:
 
-- user configuration;
-- the canonical workspace registry;
-- External and Native MCP surfaces;
-- execution contexts and conversation correlation;
-- command execution policy and Sandbox integration;
-- semantic-provider lifecycle;
-- local Coding Agent registration;
-- the optional external tunnel.
+* user configuration;
+* the Workspace registry;
+* External and Native MCP surfaces;
+* execution-context creation and validation;
+* conversation and Work correlation;
+* direct command execution policy;
+* Sandbox integration for direct execution;
+* semantic-provider lifecycle;
+* local Coding Agent registration and delegation;
+* the optional external tunnel.
 
-This keeps authorization in one place. Adapters can expose native Agent sessions, but they do not become parallel policy engines.
+This keeps the public MCP contract and direct local execution authority in one place.
+
+Product interfaces may add UX, and providers may supply capabilities, but neither can silently expand the authority granted by Agent Helm configuration.
 
 ## Workspaces and execution contexts
 
-A **Workspace** is an explicitly authorized local project. `workspace_list` exposes stable workspace IDs without exposing local paths to the MCP client.
+A **Workspace** is a local project that has been explicitly registered with Agent Helm.
 
-Before doing context-scoped work, the client calls `context_setup`. The returned `context_id` is bound to one exact Workspace and work path: the base checkout or one managed Worktree.
+`workspace_list` exposes logical Workspace identifiers to the MCP client without exposing local filesystem paths.
 
-Changing `cwd`, Git state, conversation intent, or Agent session ID does not retarget that context. Moving to another Workspace or Worktree requires another `context_setup`.
+Before context-scoped work begins, the client calls `context_setup`.
 
-Conversation intent is provenance only. It records why the conversation is working in a context but cannot expand filesystem, command, network, or Agent authority.
+The returned `context_id` identifies one exact execution target:
+
+* the Workspace base checkout; or
+* one managed Worktree associated with that Workspace.
+
+Changing `cwd`, Git state, conversation intent, or an Agent session ID does not retarget an existing context.
+
+Moving to another Workspace or Worktree requires another `context_setup`.
+
+Conversation intent is provenance. It can describe why a conversation is using a context, but it cannot expand filesystem, command, network, or delegation authority.
 
 ## MCP surfaces
 
-Agent Helm exposes two capability surfaces:
+Agent Helm exposes separate MCP capability surfaces for browser ChatGPT and local integrations.
 
-- **External MCP** for ChatGPT: command execution, semantic operations, and Agent delegation according to configured capabilities.
-- **Native MCP** for local Agent integrations: semantic operations and delegation only. It never exposes generic command authority.
+### External MCP
 
-Public tool names and schemas are owned by Agent Helm rather than by a specific semantic provider. Provider upgrades therefore cannot silently add tools to the MCP surface.
+External MCP is used by ChatGPT.
 
-## Command execution
+Depending on configuration, it may expose:
 
-`command_execute` always runs through the Agent Helm execution backend.
+* project and semantic operations;
+* direct command execution;
+* mutation capabilities;
+* local Coding Agent delegation.
+
+### Native MCP
+
+Native MCP is used by supported local Agent integrations.
+
+It exposes only the capabilities intended for native integrations and does not provide generic command execution authority.
+
+Public MCP tool names and schemas belong to Agent Helm rather than to an individual semantic provider.
+
+This allows the underlying provider to change without silently changing the public MCP surface.
+
+## Direct command execution
+
+Direct commands requested through Agent Helm run through the Agent Helm execution backend.
 
 The execution path combines:
 
-1. the selected Workspace/work-path authority;
-2. static command and path checks;
+1. the selected Workspace and work-path scope;
+2. command and path policy checks;
 3. the effective execution policy;
-4. an enforcing OS Sandbox when required;
-5. normalized MCP results and output-boundary checks.
+4. OS-level Sandbox enforcement when required;
+5. normalized MCP results and output-scope validation.
 
-Execution receives a managed `HOME` and temporary directory. Host environment variables are not copied wholesale into the child process; access is limited by the effective environment policy, with `PATH` retained for executable resolution.
+Execution uses Agent Helm-managed `HOME` and temporary directories.
 
-The command text itself can never authorize a Sandbox bypass.
+The complete host environment is not copied into child processes. `PATH` is retained for executable resolution, while additional host environment variables are controlled by policy.
 
-## Semantic code intelligence
+Command text cannot authorize its own Sandbox bypass.
 
-Agent Helm keeps semantic configuration provider-neutral: languages, ignored paths, and Git-ignore behavior belong to Agent Helm configuration rather than to Serena-specific project files.
+## Project intelligence
 
-Serena is the current semantic provider. Core creates and manages provider runtimes for authorized working copies and translates the effective Agent Helm semantic configuration into provider-specific configuration.
+Agent Helm keeps project-intelligence configuration independent from a specific provider.
 
-The public MCP contract remains stable if the underlying provider changes.
+Settings such as:
+
+* languages;
+* ignored paths;
+* Git-ignore behavior;
+
+belong to Agent Helm configuration.
+
+Serena is currently used as the semantic provider.
+
+Agent Helm creates and manages provider runtimes for authorized working copies and translates the effective Agent Helm configuration into provider-specific settings.
+
+The public MCP contract remains owned by Agent Helm.
 
 ## Local Coding Agents
 
-Local Coding Agents remain native to their host integration. For example, DSH continues to own DSH session persistence, model selection, cancellation, and UI takeover.
+Agent Helm can delegate work to supported local Coding Agent integrations.
 
-Agent Helm associates those sessions with the current execution context. A delegated session inherits the context's exact Workspace and work path; its session ID identifies the session but does not grant additional authority.
+Delegation is associated with the current Agent Helm execution context, so Agent Helm knows which Workspace and work path the task belongs to and can associate the resulting Agent session with the same Work.
+
+The Agent session ID is an identifier. It does not grant additional Agent Helm authority.
+
+The native Agent integration remains responsible for the Agent's own execution behavior, including its:
+
+* filesystem access;
+* command execution;
+* network access;
+* permission model;
+* Sandbox model;
+* model configuration;
+* session lifecycle;
+* cancellation and UI controls.
+
+Agent Helm does not claim that its direct-execution Sandbox is automatically imposed on the internal execution of every delegated Coding Agent.
+
+## Data flow
+
+Projects and execution environments remain on the local machine, but task-relevant local information can be returned to ChatGPT through MCP.
+
+Depending on the task and enabled capabilities, this may include:
+
+* relevant file contents;
+* project structure;
+* semantic results;
+* diagnostics;
+* Git state and diffs;
+* command output;
+* build and test results.
+
+This information is what allows ChatGPT to work against the real project instead of relying only on content manually pasted into the conversation.
+
+The Chrome Extension uses Native Messaging for its local connection. It does not expose the local MCP HTTP endpoint directly to browser JavaScript.
 
 ## Transport
 
-Core exposes token-authenticated MCP endpoints on the local host. External ChatGPT connectivity can be provided through the managed tunnel.
+Agent Helm Core exposes authenticated MCP endpoints on the local machine.
 
-Browser extensions do not use the MCP HTTP endpoint as a browser data plane. The Agent Helm Chrome Extension communicates with the local installation through Native Messaging.
+External ChatGPT connectivity can be provided through the managed tunnel.
+
+The local HTTP surface uses bearer-token authentication and is not intended to be used as a general browser-facing API.
 
 ## Design rule
 
-The central architectural rule is simple:
+The central architectural rule is:
 
-> **Product interfaces may add UX, and providers may supply capabilities, but Agent Helm Core owns the public contract and local execution authority.**
+> **Agent Helm owns the public MCP contract and the authority for direct local execution. Product interfaces add UX, providers add capabilities, and native Agent integrations retain responsibility for their own execution environment.**
