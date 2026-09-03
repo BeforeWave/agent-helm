@@ -159,7 +159,7 @@ Generated token material is stored with restricted local permissions.
 
 The local MCP HTTP surface is not intended to be used as a browser data plane.
 
-Browser-origin access is rejected by the supported browser integration path even if a token is available.
+Browser-origin requests to the local MCP HTTP surface are rejected even when a valid bearer token is present.
 
 The Agent Helm Chrome Extension communicates with the local installation through Native Messaging.
 
