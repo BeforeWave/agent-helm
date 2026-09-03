@@ -1,64 +1,119 @@
 # Security Model
 
-Agent Helm gives ChatGPT and local Coding Agents controlled access to a developer workstation. Its security model is based on explicit authority, narrow execution scope, and fail-closed behavior when required protection cannot be enforced.
+Agent Helm gives ChatGPT controlled access to explicitly authorized local development projects.
+
+Its security model is based on explicit authority, narrow execution scope, capability limits, and fail-closed behavior when required protection cannot be enforced.
+
+Delegated Coding Agents are treated separately from direct Agent Helm execution: Agent Helm scopes and tracks the delegation, while the native Agent integration remains responsible for enforcing its own execution permissions and Sandbox model.
+
+## Trust boundaries and data flow
+
+Agent Helm is designed around a local execution environment.
+
+Projects, Git repositories, commands, build tools, and Agent runtimes remain on the local machine.
+
+To perform a task, ChatGPT may receive task-relevant information from the authorized local environment through MCP, including:
+
+* relevant file contents;
+* project structure;
+* semantic results;
+* diagnostics;
+* Git information;
+* command output;
+* build results;
+* test results.
+
+Agent Helm therefore should not be described as a system in which no project information leaves the machine.
+
+The important boundary is that access is scoped to authorized Workspaces, enabled capabilities, and the configured execution policy.
 
 ## Authority chain
 
-A local operation is constrained by several independent boundaries:
+A direct local operation through Agent Helm is constrained by several independent boundaries:
 
-1. **Workspace authorization** — only registered local projects are eligible for work.
+1. **Workspace authorization** — only registered local projects are eligible for context-scoped work.
 2. **Execution context** — `context_setup` selects one exact Workspace and work path.
-3. **Conversation ownership** — an External execution context cannot be reused by another ChatGPT conversation.
-4. **Capability policy** — command, semantic mutation, and delegation surfaces are explicitly enabled or disabled.
-5. **Execution policy** — filesystem, command, environment, and network rules limit local execution.
-6. **Sandbox enforcement** — operations that need OS-level containment use the supported Sandbox backend.
-7. **Output boundary** — public MCP results pass a final confidentiality check before being returned.
+3. **Conversation ownership** — External execution contexts are associated with the ChatGPT conversation that created them.
+4. **Capability policy** — command execution, semantic mutation, read/write access, and delegation can be enabled or disabled.
+5. **Execution policy** — filesystem, command, environment, and network rules constrain direct local execution.
+6. **Sandbox enforcement** — operations requiring OS-level containment use the supported Sandbox backend.
+7. **Output-scope validation** — public MCP results pass final Agent Helm checks before being returned.
 
-No later layer can use an identifier such as `cwd`, a Worktree name, conversation intent, or Agent session ID to expand authority granted by an earlier layer.
+A later identifier such as `cwd`, a Worktree name, conversation intent, or Agent session ID cannot expand authority granted by an earlier layer.
 
 ## Workspace and context isolation
 
-`workspace_list` returns authorized logical workspace IDs without exposing local filesystem paths to the MCP client.
+`workspace_list` returns logical Workspace identifiers without exposing registered local filesystem paths to the MCP client.
 
-`context_setup` binds a `context_id` to one exact execution target: a Workspace base checkout or a managed Worktree. Context-scoped tools inherit that target.
+`context_setup` binds a `context_id` to one exact execution target:
 
-Changing `cwd` only selects a directory inside the established authority. Git operations do not retarget the context. Delegated Agent sessions inherit the same Workspace/work path and cannot select a different one.
+* a Workspace base checkout; or
+* a managed Worktree belonging to that Workspace.
 
-## Command execution
+Context-scoped Agent Helm tools inherit that target.
 
-All `command_execute` calls pass through the Agent Helm execution backend.
+Changing `cwd` selects a directory only within the authority already established by the execution context.
+
+Git operations do not retarget the context.
+
+A delegated Agent session is associated with the same Workspace and work path for Work tracking and delegation scope, but the native integration remains responsible for enforcing its own filesystem and execution permissions.
+
+## Direct command execution
+
+All direct command execution exposed by Agent Helm goes through the Agent Helm execution backend.
 
 The default execution policy is conservative:
 
-- `allowUnsandboxed: false`;
-- no extra filesystem grants;
-- no extra environment grants;
-- no network destinations;
-- local TCP binding disabled.
+* `allowUnsandboxed: false`;
+* no additional filesystem grants;
+* no additional environment grants;
+* no outbound network destinations;
+* local TCP binding disabled.
 
-The selected Workspace/work path is the primary filesystem authority. Additional access must come from configuration.
+The selected Workspace or work path is the primary filesystem scope.
 
-Agent Helm performs static command/path checks where it can do so reliably. If a command's behavior cannot be safely determined statically, it may proceed only through an enforcing Sandbox. Static analysis can reject access; it cannot authorize a Sandbox bypass.
+Additional host access must be explicitly granted by configuration.
+
+Agent Helm performs static command and path checks where behavior can be determined reliably.
+
+When static validation is insufficient and the requested operation requires stronger containment, the operation may proceed only through an enforcing Sandbox.
+
+Static analysis can reject an operation. It cannot authorize a Sandbox bypass.
 
 ## Sandbox and fail-closed behavior
 
-When Sandbox enforcement is required but unsupported, unavailable, or unable to represent the requested policy safely, the operation fails instead of silently running with broader authority.
+When direct Agent Helm execution requires Sandbox enforcement but the supported Sandbox is unavailable, unsupported, or unable to represent the requested policy safely, the operation fails rather than silently running with broader authority.
 
-An explicit user-level `execution.allowUnsandboxed: true` enables a limited fallback for statically provable write-capable commands when the Sandbox is unavailable. It does not allow unsandboxed fallback for read-only execution or protected writes.
+A user-level:
 
-Agent Helm's own protected configuration paths are passed to the execution backend as non-configurable write restrictions.
+```yaml
+execution:
+  allowUnsandboxed: true
+```
+
+can enable only the explicitly supported fallback behavior.
+
+It should not be treated as a general "disable security" switch.
+
+Protected Agent Helm configuration and runtime paths remain subject to non-configurable restrictions where supported by the execution backend.
 
 ## Filesystem, environment, and temporary state
 
-Execution receives managed `HOME` and temporary directories rather than inheriting the host user's normal state directories.
+Direct execution receives Agent Helm-managed `HOME` and temporary directories instead of automatically inheriting the host user's normal state directories.
 
-Host environment access is name-scoped. `PATH` is retained for executable resolution, while additional variables must be allowed explicitly. Managed variables such as `HOME` and `TMPDIR` are supplied by Agent Helm.
+Host environment access is name-scoped.
 
-`execution.filesystem.allowFromEnv` can derive filesystem authority from selected host environment variables, but only from absolute, canonicalizable paths and only when the variable is not denied.
+`PATH` is retained for executable resolution, while additional host variables must be explicitly allowed.
+
+Agent Helm-managed values such as `HOME` and `TMPDIR` are supplied by the runtime.
+
+`execution.filesystem.allowFromEnv` can derive additional filesystem access from explicitly selected host environment variables when those values resolve to valid absolute paths.
 
 ## Network policy
 
-Network authority is explicit:
+Network access for direct Agent Helm execution is explicit.
+
+Example:
 
 ```yaml
 execution:
@@ -69,49 +124,88 @@ execution:
     allowLocalBinding: false
 ```
 
-`allow` grants destinations, `deny` removes them, and `allowLocalBinding` separately controls whether local TCP listeners may be created. Local binding is disabled by default.
+`allow` grants configured outbound destinations.
 
-Workspace-level rules inherit user-level grants and can add restrictions or additional approved access according to the configuration model.
+`deny` removes configured access.
+
+`allowLocalBinding` separately controls whether local TCP listeners may be created and is disabled by default.
+
+Workspace-level rules are resolved together with user-level policy according to the configuration model.
 
 ## Capability boundaries
 
-The user configuration defines the fixed MCP capability ceiling.
+User configuration defines the maximum MCP capability surface available to Agent Helm.
 
-External MCP can independently configure:
+External MCP can configure capabilities such as:
 
-- command execution;
-- semantic operations;
-- read-only mode;
-- local Agent delegation.
+* command execution;
+* semantic operations;
+* read-only mode;
+* local Agent delegation.
 
-Native MCP never exposes generic command authority.
+Native MCP does not expose generic direct command execution.
 
-Runtime UI controls may reduce the External surface further. They cannot raise it above the configured ceiling.
+Runtime UI controls may reduce the effective External surface.
 
-Read-only mode removes mutation authority even if other resource grants would normally permit writes.
+They cannot raise it above the configured capability ceiling.
+
+Read-only mode removes mutation authority even when other resource grants would otherwise permit writes.
 
 ## MCP transport authentication
 
-Core MCP HTTP endpoints require bearer tokens. Generated token files use restricted file permissions.
+Agent Helm Core MCP HTTP endpoints require bearer-token authentication.
 
-The local HTTP surface is not intended as a browser data plane. Browser-origin requests are rejected even if they possess a token; the Agent Helm Chrome Extension uses Native Messaging for its local connection.
+Generated token material is stored with restricted local permissions.
 
-## Confidential output boundary
+The local MCP HTTP surface is not intended to be used as a browser data plane.
 
-Every public MCP tool result passes a final Agent Helm-owned confidentiality boundary.
+Browser-origin access is rejected by the supported browser integration path even if a token is available.
 
-If a result would expose host data outside the authorized execution context, Agent Helm withholds the result and returns `confidential_output_redacted` rather than forwarding the data to the client.
+The Agent Helm Chrome Extension communicates with the local installation through Native Messaging.
 
-This is a final defense boundary; it does not replace correct workspace and execution enforcement.
+## Output-scope validation
+
+Public MCP results pass Agent Helm-owned validation before being returned to the client.
+
+These checks provide an additional boundary against returning host data that is outside the scope of the authorized Agent Helm operation.
+
+They are not a general-purpose data-loss-prevention system and should not be treated as a substitute for correct Workspace, execution-policy, and Sandbox enforcement.
+
+Where Agent Helm detects an output that cannot safely be returned under the current context, the result is withheld rather than forwarded to the MCP client.
 
 ## Local Coding Agents
 
-A delegated native Agent session is scoped to the same execution context that created it. The Agent's own session ID is an identifier, not an authority token.
+Agent Helm can delegate a task to a supported local Coding Agent integration.
 
-Native integrations continue to own their session persistence, model configuration, cancellation, and UI controls, while Agent Helm controls which Workspace/work path the delegated work belongs to.
+The delegation request remains associated with the current Agent Helm Workspace, work path, conversation, and Work.
+
+An Agent session ID identifies the delegated session and does not expand Agent Helm authority.
+
+The native integration continues to own the Agent's:
+
+* session persistence;
+* model configuration;
+* cancellation;
+* UI controls;
+* filesystem enforcement;
+* command permissions;
+* network permissions;
+* Sandbox behavior.
+
+Agent Helm's direct-execution Sandbox policy should not be assumed to automatically govern every operation performed internally by a delegated Agent.
 
 ## Security posture
 
-Agent Helm is designed to fail closed at authority boundaries, but it runs developer tools against real local projects and should be configured deliberately.
+Agent Helm runs real development tools against real local projects.
 
-Keep Workspace registration narrow, grant only the filesystem/environment/network access a project needs, and leave unsandboxed fallback disabled unless there is a specific reason to enable it.
+It should be configured deliberately.
+
+Recommended defaults are:
+
+* keep Workspace registration narrow;
+* grant only the filesystem access a project actually needs;
+* expose only the environment variables required by the toolchain;
+* allow only required network destinations;
+* keep local binding disabled unless necessary;
+* keep unsandboxed fallback disabled unless there is a specific reason to enable it;
+* review the permission and Sandbox model of each local Coding Agent integration separately.
