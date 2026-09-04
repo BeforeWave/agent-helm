@@ -203,8 +203,8 @@
     "packages/agent-helm/src/agents/rpc.ts#LocalMcpConnection": "1f460e3b12f46d523d43b4065a1c2f5a2ac48e26ca852ebcef4b4cc9debbc86a",
     "packages/agent-helm/src/agents/rpc.ts#WireMessage": "c9cdf672eb5668b94850d01fab1ffc005980ab46fb1ab8c40c3d028a06721faf",
     "packages/agent-helm/src/runtime/dependencies.ts#CoreDependencyName": "5ba0696f43eca7c5991330f84177d48dcaac9b30477848975ec823affb62d27f",
-    "packages/agent-helm/src/runtime/tunnel-setup.ts#TunnelSetupInput": "8514914fbd6136e7b21c40576b43b821b1cca36129cc9819a0bc643eb67080bc",
-    "packages/agent-helm/src/runtime/status.ts#SupervisorStatus": "64cee1fa2f749e5ad72368d23546b44b9aa714246b9db77bb3145df7a0cdf22e",
+    "packages/agent-helm/src/runtime/tunnel-setup.ts#TunnelSetupInput": "1d849ad4044fc060cc6fe1ffd9e289b4474806930cb912f7d0211d87f190b39b",
+    "packages/agent-helm/src/runtime/status.ts#SupervisorStatus": "3d270709bde9028db0f7f07b1b6e350d866406ea2bedb04ec368d4020d140ed0",
     "packages/agent-helm/src/mcp/access.ts#ExternalUserAccess": "7a5cfab4d20cac9ca70fccfb7b05e1757e11ff4d3f8450b04f5819abe7a1aab2",
     "packages/agent-helm/src/workspaces/registry.ts#WorkspaceRef": "d52e6eefbbd08713d170487f159fa2e08d47ed56f9584e899345cb457c813245",
     "packages/agent-helm/src/sessions/store.ts#ConversationIntent": "71d4506a8c588d22d5689f073ee7106350105271ec3499b39cb141aef37c2ebc",
@@ -212,12 +212,18 @@
     "packages/agent-helm/src/sessions/store.ts#ChatSession": "7a864c10f7a01ca07e8df1bbe68f50cade6eab53726f4b314eec93bd62cb9f8d",
     "packages/agent-helm/src/sessions/store.ts#DelegatedSession": "797a145454d25bdd909ecb34d78c1085ab2dac5d9e178e5345eb9903f750b154",
     "packages/agent-helm/src/sessions/service.ts#ChatSessionActivity": "e068b708af8a97e1dd895eda71c66f5901fa07312ea8dc550263fb66c4ce2460",
-    "packages/agent-helm/src/sessions/service.ts#ChatSessionSummary": "b3deb9f00f8c669da440e4bab13bbfe495032ae90d74c0e6a062a37179dce1ab",
+    "packages/agent-helm/src/sessions/service.ts#ChatSessionSummary": "b197686e1040f2650f3797fd22f41637f905a61e86f9a7577085d8e19c404482",
     "packages/agent-helm/src/sessions/service.ts#ChatSessionSummaryPage": "0e34567bb7e962e800e7bbeee1ea5ab50c5dff8a924b51e7f6426a9da35debc5",
-    "packages/agent-helm/src/sessions/service.ts#ChatSessionTimelineItem": "c42772ada9a10ddbcae17ba120a719355a13293aa023bde2164583e0c01ba66a",
+    "packages/agent-helm/src/sessions/service.ts#ChatSessionTimelineItem": "a3b9a7ff30c4867e0653242322a474194dc4399a00482e348bfb2f46884ce91b",
     "packages/agent-helm/src/cli.ts#ChromeNativeRequest": "ae1a4df7e8861b8c6b3654a985690f1a46942d9da6ea02e371dd7d18abe3d75e",
     "packages/agent-helm/src/cli.ts#ChromeNativeResponse": "65528a532f9dee33e8d6031d03ece666a3e34a8ae8007e165186a06c4cfef115",
-    "packages/agent-helm-extensions/chrome-extension/src/adapters/chrome/NativeMessagingTransport.ts#NativeDaemonProbe": "0a1963b01870f861177b61e5f44ca1863885de6b1e7dbdb65bdb0a4a94c44b64"
+    "packages/agent-helm-extensions/chrome-extension/src/adapters/chrome/NativeMessagingTransport.ts#NativeDaemonProbe": "0a1963b01870f861177b61e5f44ca1863885de6b1e7dbdb65bdb0a4a94c44b64",
+    "packages/agent-helm/packages/agent-helm-ui-contract/src/work-history.ts#WorkHistoryPresentationLabel": "009ecbbf4383c21eeeb0b3e0778e99be1806958cb3da24798a0ac308ae704faf",
+    "packages/agent-helm/packages/agent-helm-ui-contract/src/work-history.ts#WorkHistoryPresentationTitle": "2b71f679e482057b4ec658903d712e8986058042823bb76a0791532801be35b2",
+    "packages/agent-helm/packages/agent-helm-ui-contract/src/work-history.ts#WorkHistoryPresentationDetail": "253565b910c6350e8c9c7f2a55f8a2181b2f052ff48fd00c0f3d7c04659067e7",
+    "packages/agent-helm/packages/agent-helm-ui-contract/src/work-history.ts#WorkHistorySessionPresentation": "5d2d438ba76dd472ead616f2a86a6ef765ee246a1b22166a306af2e47731232e",
+    "packages/agent-helm/packages/agent-helm-ui-contract/src/work-history.ts#WorkHistoryTimelinePresentation": "e8d5b3c98c92a4ca3cb8bddf729ef41f9cf680c7af0403821abedede8a81545b",
+    "packages/agent-helm/packages/agent-helm-ui-contract/src/work-history.ts#WorkHistoryPresentationSection": "847dc5b410d5a91bac8854edf539ef01f2a34260d6aa5605b63acf350b83c9ef"
   },
   "surfaceFingerprints": {
     "packages/agent-helm/src/agents/rpc.ts#AdapterRpcClient": {
