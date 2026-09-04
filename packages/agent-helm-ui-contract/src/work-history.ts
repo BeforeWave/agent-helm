@@ -14,6 +14,50 @@ export interface WorkHistoryWorkspaceReference {
   path?: string
 }
 
+export type WorkHistoryPresentationLabel =
+  | 'activity'
+  | 'action.read'
+  | 'action.search'
+  | 'action.inspect'
+  | 'action.diagnostic'
+  | 'action.edit'
+  | 'action.verify'
+  | 'action.command'
+  | 'delegation.created'
+  | 'delegation.attached'
+  | 'delegation.prompted'
+  | 'delegation.resumed'
+  | 'delegation.status'
+
+export type WorkHistoryPresentationTitle =
+  | { kind: 'text'; text: string }
+  | { kind: 'label'; label: WorkHistoryPresentationLabel }
+
+export type WorkHistoryPresentationDetail =
+  | { kind: 'text'; text: string }
+  | { kind: 'tool'; text: string }
+  | { kind: 'workspace'; text: string }
+  | { kind: 'status'; text: string }
+  | { kind: 'duration'; durationMs: number }
+  | { kind: 'subagent-session'; id: string }
+  | { kind: 'error'; text: string }
+
+export type WorkHistoryPresentationSection =
+  | { kind: 'task'; text: string }
+  | { kind: 'follow-up-prompts'; items: string[] }
+
+export interface WorkHistorySessionPresentation {
+  title: string
+  workspaceLabel?: string
+}
+
+export interface WorkHistoryTimelinePresentation {
+  title: WorkHistoryPresentationTitle
+  primary?: string
+  details: WorkHistoryPresentationDetail[]
+  expanded?: WorkHistoryPresentationSection[]
+}
+
 export interface WorkHistorySession {
   id: string
   originIntent?: WorkHistoryConversationIntent
@@ -29,6 +73,7 @@ export interface WorkHistorySession {
   delegationCount: number
   agentLabel?: string
   runtimeLabel?: string
+  presentation: WorkHistorySessionPresentation
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -99,6 +144,13 @@ export function normalizeWorkHistorySession(value: unknown): WorkHistorySession 
   const lastActivityAt = text(raw.lastActivityAt) ?? updatedAt
   const agentLabel = text(raw.agentLabel)
   const runtimeLabel = text(raw.runtimeLabel)
+  const presentationRaw = record(raw.presentation)
+  const presentationTitle = text(presentationRaw.title) ?? id
+  const workspaceLabel = text(presentationRaw.workspaceLabel)
+  const presentation: WorkHistorySessionPresentation = {
+    title: presentationTitle,
+    ...(workspaceLabel ? { workspaceLabel } : {}),
+  }
   const {
     originChat: _originChat,
     boundChats: _boundChats,
@@ -125,6 +177,7 @@ export function normalizeWorkHistorySession(value: unknown): WorkHistorySession 
     delegationCount: count(raw.delegationCount),
     ...(agentLabel ? { agentLabel } : {}),
     ...(runtimeLabel ? { runtimeLabel } : {}),
+    presentation,
   } as WorkHistorySession
 }
 
@@ -133,7 +186,72 @@ export function normalizeWorkHistorySessions(value: unknown): WorkHistorySession
   return value.map(normalizeWorkHistorySession).filter((session): session is WorkHistorySession => Boolean(session))
 }
 
-/** One canonical title rule across every Work History surface. */
+function presentationLabel(value: unknown): WorkHistoryPresentationLabel | undefined {
+  const candidate = text(value)
+  return candidate && [
+    'activity', 'action.read', 'action.search', 'action.inspect', 'action.diagnostic', 'action.edit', 'action.verify', 'action.command',
+    'delegation.created', 'delegation.attached', 'delegation.prompted', 'delegation.resumed', 'delegation.status',
+  ].includes(candidate) ? candidate as WorkHistoryPresentationLabel : undefined
+}
+
+function normalizePresentationTitle(value: unknown): WorkHistoryPresentationTitle | undefined {
+  const raw = record(value)
+  if (raw.kind === 'text') {
+    const valueText = text(raw.text)
+    return valueText ? { kind: 'text', text: valueText } : undefined
+  }
+  if (raw.kind === 'label') {
+    const label = presentationLabel(raw.label)
+    return label ? { kind: 'label', label } : undefined
+  }
+  return undefined
+}
+
+function normalizePresentationDetail(value: unknown): WorkHistoryPresentationDetail | undefined {
+  const raw = record(value)
+  if (raw.kind === 'duration') return typeof raw.durationMs === 'number' && Number.isFinite(raw.durationMs) ? { kind: 'duration', durationMs: raw.durationMs } : undefined
+  if (raw.kind === 'subagent-session') {
+    const id = text(raw.id)
+    return id ? { kind: 'subagent-session', id } : undefined
+  }
+  if (raw.kind === 'text' || raw.kind === 'tool' || raw.kind === 'workspace' || raw.kind === 'status' || raw.kind === 'error') {
+    const detailText = text(raw.text)
+    return detailText ? { kind: raw.kind, text: detailText } as WorkHistoryPresentationDetail : undefined
+  }
+  return undefined
+}
+
+function normalizePresentationSection(value: unknown): WorkHistoryPresentationSection | undefined {
+  const raw = record(value)
+  if (raw.kind === 'task') {
+    const sectionText = text(raw.text)
+    return sectionText ? { kind: 'task', text: sectionText } : undefined
+  }
+  if (raw.kind === 'follow-up-prompts' && Array.isArray(raw.items)) {
+    const items = raw.items.map(text).filter((item): item is string => Boolean(item))
+    return items.length ? { kind: 'follow-up-prompts', items } : undefined
+  }
+  return undefined
+}
+
+/** Compatibility normalizer. Current Core should always provide presentation. */
+export function normalizeWorkHistoryTimelinePresentation(value: unknown): WorkHistoryTimelinePresentation {
+  const raw = record(value)
+  const presentationRaw = record(raw.presentation)
+  const title = normalizePresentationTitle(presentationRaw.title)
+  const primary = text(presentationRaw.primary)
+  const details = Array.isArray(presentationRaw.details)
+    ? presentationRaw.details.map(normalizePresentationDetail).filter((detail): detail is WorkHistoryPresentationDetail => Boolean(detail))
+    : []
+  const expanded = Array.isArray(presentationRaw.expanded)
+    ? presentationRaw.expanded.map(normalizePresentationSection).filter((section): section is WorkHistoryPresentationSection => Boolean(section))
+    : []
+  if (title) return { title, ...(primary ? { primary } : {}), details, ...(expanded.length ? { expanded } : {}) }
+
+  return { title: { kind: 'label', label: 'activity' }, details: [] }
+}
+
+/** Compatibility accessor retained for older consumers. New UI should consume Core presentation. */
 export function workHistoryTimelinePurpose(value: unknown): string | undefined {
   const raw = record(value)
   const args = record(raw.arguments)

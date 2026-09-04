@@ -1,6 +1,6 @@
 {
   "name": "@beforewave/agent-helm-ui-contract",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Browser-safe shared Agent Helm UI locale and presentation contract.",
   "license": "MIT",
   "repository": {

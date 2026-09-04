@@ -130,4 +130,4 @@ export * from './work-history.js'
 
 export { tunnelOnboardingRequired, tunnelOnboardingSource, tunnelSetupCanSubmit, tunnelSetupLinks } from './tunnel-setup.js'
 export type { TunnelOnboardingLinkAction, TunnelOnboardingLinkId, TunnelOnboardingText, TunnelOnboardingTextKey, TunnelSetupProjection, TunnelSetupValues } from './tunnel-setup.js'
-export { agentHelmChromeCompatibilityUrl, agentHelmInstallerSourceForRelease, agentHelmMacosInstallerFilename, loadAgentHelmInstallerSource } from './installer.js'
+export { agentHelmInstallerSourceForRelease, agentHelmMacosInstallerFilename } from './installer.js'
