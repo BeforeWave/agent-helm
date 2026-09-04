@@ -14,7 +14,76 @@ When a task needs more execution power, ChatGPT can also hand the work off to a 
 
 Once the agent is done, ChatGPT can come back to the real project, inspect the code, Git diff, and test results, and continue from there.
 
-<img width="2166" height="1498" alt="Agent Helm" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+<img width="1000" alt="Agent Helm" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+
+## Quick Start
+
+### 1. Install Agent Helm
+
+macOS / Linux one-click installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh
+```
+
+Windows x64:
+
+```powershell
+irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1 | iex
+```
+
+Stable npm release:
+
+```bash
+npm install -g @beforewave/agent-helm
+```
+
+To install a specific GitHub release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh -s -- 0.1.4
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1))) -Version 0.1.4
+```
+
+The installer reuses Node.js 22+ when available and otherwise installs an Agent Helm-managed Node runtime without changing the system Node.js installation.
+
+### 2. Configure
+
+Run setup:
+
+```bash
+agent-helm setup
+```
+
+`agent-helm setup` handles the environment checks and connection setup required to run Agent Helm.
+
+### 3. Add a Project and Start
+
+Enter the project you want to use:
+
+```bash
+cd /path/to/project
+agent-helm workspace add
+agent-helm start
+```
+
+### 4. Verify the Connection
+
+```bash
+agent-helm status
+agent-helm doctor
+```
+
+Once connected, go back to ChatGPT in your browser and start working directly with that project.
+
+To stop Agent Helm later:
+
+```bash
+agent-helm stop
+```
 
 ## Let ChatGPT Work Directly with Your Local Project
 
@@ -60,78 +129,6 @@ ChatGPT can inspect the actual state left behind after execution, including:
 
 It can then keep editing and validating based on what actually happened, rather than treating an agent's summary as the final source of truth.
 
-## Quick Start
-
-### Install Agent Helm
-
-Stable npm release:
-
-\`\`\`bash
-npm install -g @beforewave/agent-helm
-\`\`\`
-
-GitHub install on macOS / Linux:
-
-\`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh
-\`\`\`
-
-Install a specific version:
-
-\`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh -s -- 0.1.4
-\`\`\`
-
-Windows x64:
-
-\`\`\`powershell
-irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1 | iex
-\`\`\`
-
-Install a specific version:
-
-\`\`\`powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1))) -Version 0.1.4
-\`\`\`
-
-The GitHub installer supports macOS and Windows x64. It reuses Node.js 22+ when available and otherwise installs an Agent Helm-managed Node runtime without changing the system Node.js installation.
-
-Run setup:
-
-\`\`\`bash
-agent-helm setup
-\`\`\`
-
-\`agent-helm setup\` handles the environment checks and connection setup required to run Agent Helm.
-
-Then enter the project you want to use:
-
-\`\`\`bash
-cd /path/to/project
-agent-helm workspace add
-agent-helm start
-\`\`\`
-
-Once connected, go back to ChatGPT in your browser and start working directly with that project.
-
-### Chrome Extension
-
-If you prefer to handle installation, connection, and day-to-day management from the browser:
-
-\`\`\`bash
-agent-helm setup chrome
-\`\`\`
-
-You can also use the [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions).
-
-### Common Commands
-
-\`\`\`bash
-agent-helm status
-agent-helm doctor
-agent-helm stop
-\`\`\`
-
 ## Work History
 
 Agent Helm can associate a **ChatGPT conversation, local project, worktree, direct ChatGPT operations, and agent sessions** as one piece of work.
@@ -173,7 +170,7 @@ Agent Helm can be used on its own or through product integrations that fit into 
 
 ChatGPT in your browser can work directly with your local project and hand tasks off to native DSH Sessions when needed. DSH also gets a lightweight view for seeing the project, local actions, and work history associated with ChatGPT.
 
-<img width="2164" height="1666" alt="DSH with ChatGPT" src="https://github.com/user-attachments/assets/48103763-2897-4df3-94a9-af36df672448" />
+<img width="1000" alt="DSH with ChatGPT" src="https://github.com/user-attachments/assets/48103763-2897-4df3-94a9-af36df672448" />
 
 > The `dsh-plugin` entry in the lower-left is DSH with ChatGPT.
 
@@ -181,9 +178,15 @@ ChatGPT in your browser can work directly with your local project and hand tasks
 
 The [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions) provides a browser-based installation and management experience.
 
+If Agent Helm is already installed, configure the browser integration with:
+
+```bash
+agent-helm setup chrome
+```
+
 It associates the current ChatGPT conversation with the corresponding local work, so you can see the active project, worktree, ChatGPT's local actions, connected coding agents, and agent sessions directly from the browser.
 
-<img width="2166" height="1498" alt="Agent Helm Chrome Extension" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+<img width="1000" alt="Agent Helm Chrome Extension" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
 
 > The panel on the right is the Agent Helm Chrome Extension Side Panel.
 

@@ -14,7 +14,76 @@ ChatGPT 可以理解项目、查找文件、修改代码、运行命令、查看
 
 Agent 做完以后，ChatGPT 还能重新检查真实项目里的代码、Git Diff 和测试结果，再继续下一步。
 
-<img width="2166" height="1498" alt="Agent Helm" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+<img width="1000" alt="Agent Helm" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+
+## 快速开始
+
+### 1. 安装 Agent Helm
+
+macOS / Linux 一键安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh
+```
+
+Windows x64：
+
+```powershell
+irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1 | iex
+```
+
+npm 稳定版：
+
+```bash
+npm install -g @beforewave/agent-helm
+```
+
+安装指定 GitHub Release：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh -s -- 0.1.4
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1))) -Version 0.1.4
+```
+
+安装器会优先复用已有的 Node.js 22+；如果没有，则安装由 Agent Helm 自己管理的 Node runtime，不修改系统 Node.js。
+
+### 2. 配置
+
+运行 Setup：
+
+```bash
+agent-helm setup
+```
+
+`agent-helm setup` 会完成 Agent Helm 运行所需的环境检查和连接配置。
+
+### 3. 添加项目并启动
+
+进入你希望使用的项目：
+
+```bash
+cd /path/to/project
+agent-helm workspace add
+agent-helm start
+```
+
+### 4. 验证连接
+
+```bash
+agent-helm status
+agent-helm doctor
+```
+
+完成连接后，回到浏览器里的 ChatGPT，就可以直接基于这个项目开始工作。
+
+之后需要停止 Agent Helm 时：
+
+```bash
+agent-helm stop
+```
 
 ## 直接让 ChatGPT 使用本地项目
 
@@ -62,78 +131,6 @@ ChatGPT 可以继续查看任务执行后的真实状态，包括：
 
 它可以基于这些实际结果继续修改和验证，而不是只根据 Agent 的文字回复判断任务是否完成。
 
-## 快速开始
-
-### 安装 Agent Helm
-
-npm 稳定版：
-
-\`\`\`bash
-npm install -g @beforewave/agent-helm
-\`\`\`
-
-macOS / Linux 从 GitHub 安装：
-
-\`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh
-\`\`\`
-
-指定版本：
-
-\`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh -s -- 0.1.4
-\`\`\`
-
-Windows x64：
-
-\`\`\`powershell
-irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1 | iex
-\`\`\`
-
-指定版本：
-
-\`\`\`powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1))) -Version 0.1.4
-\`\`\`
-
-GitHub 安装入口支持 macOS 和 Windows x64。已有 Node.js 22+ 时直接复用；否则安装 Agent Helm 自己管理的 Node runtime，不修改系统 Node.js。
-
-运行 Setup：
-
-\`\`\`bash
-agent-helm setup
-\`\`\`
-
-\`agent-helm setup\` 会完成 Agent Helm 运行所需的环境检查和连接配置。
-
-然后进入你希望使用的项目：
-
-\`\`\`bash
-cd /path/to/project
-agent-helm workspace add
-agent-helm start
-\`\`\`
-
-完成连接后，回到浏览器里的 ChatGPT，就可以直接基于这个项目开始工作。
-
-### Chrome Extension
-
-如果希望通过浏览器完成安装、连接和日常管理：
-
-\`\`\`bash
-agent-helm setup chrome
-\`\`\`
-
-也可以使用 [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions)。
-
-### 常用命令
-
-\`\`\`bash
-agent-helm status
-agent-helm doctor
-agent-helm stop
-\`\`\`
-
 ## Work History
 
 Agent Helm 可以把一次工作中的 **ChatGPT Conversation、本地项目、Worktree、ChatGPT 的直接操作和 Agent Session** 关联起来。
@@ -175,7 +172,7 @@ Agent Helm 可以独立使用，也可以通过不同的产品入口接入现有
 
 浏览器里的 ChatGPT 可以直接使用本地项目，在需要时把任务交给原生 DSH Session；DSH 里也会提供一个轻量入口，用来查看 ChatGPT 关联的项目、本地操作和工作记录。
 
-<img width="2164" height="1666" alt="DSH with ChatGPT" src="https://github.com/user-attachments/assets/48103763-2897-4df3-94a9-af36df672448" />
+<img width="1000" alt="DSH with ChatGPT" src="https://github.com/user-attachments/assets/48103763-2897-4df3-94a9-af36df672448" />
 
 > 左下方的 `dsh-plugin` 是 DSH with ChatGPT。
 
@@ -183,9 +180,15 @@ Agent Helm 可以独立使用，也可以通过不同的产品入口接入现有
 
 [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions) 提供浏览器里的安装和管理入口。
 
+如果已经安装 Agent Helm，可以运行：
+
+```bash
+agent-helm setup chrome
+```
+
 它会把当前 ChatGPT Conversation 和对应的本地工作关联起来，让你直接查看当前项目、Worktree、ChatGPT 的本地操作、Coding Agent 和 Agent Session。
 
-<img width="2166" height="1498" alt="Agent Helm Chrome Extension" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+<img width="1000" alt="Agent Helm Chrome Extension" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
 
 > 右侧为 Agent Helm Chrome Extension 的 Side Panel。
 
