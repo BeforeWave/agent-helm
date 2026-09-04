@@ -72,7 +72,7 @@ The default execution policy is conservative:
 
 The selected Workspace or work path is the primary filesystem scope.
 
-Additional host access must be explicitly granted by configuration, except for bounded read-only runtime support needed to execute tools that were already part of the Core daemon's captured runtime environment.
+Additional host access must be explicitly granted by configuration, except for bounded read-only runtime support needed to execute tools that were already part of the Core daemon's captured runtime environment. Broad filesystem grants do not override protected Agent Helm control data or common host credential locations.
 
 Agent Helm performs static command and path checks where behavior can be determined reliably.
 
@@ -103,9 +103,9 @@ Direct execution receives Agent Helm-managed `HOME` and temporary directories in
 
 Host environment access is name-scoped.
 
-`PATH` is retained for executable resolution, while additional host variables must be explicitly allowed. Agent Helm captures the daemon's trusted `PATH` runtime topology rather than treating command-time `PATH` changes as new authority.
+`PATH` is retained for executable resolution, while additional host variables are controlled by policy. Credential-bearing or control-plane environment values are not inherited as ordinary command environment. Agent Helm captures the daemon's trusted `PATH` runtime topology rather than treating command-time `PATH` changes as new authority.
 
-Captured `PATH` directories and their canonical equivalents are read-only runtime authority. Agent Helm may also add bounded read-only authority for audited runtime-manager/package-manager layouts and native or shebang dependencies required by those executables. This runtime authority never becomes writable authority, and `filesystem.deny` remains higher priority.
+Captured `PATH` directories and their canonical equivalents are read-only runtime authority. Agent Helm may also add bounded read-only authority for audited runtime/toolchain layouts and native or script dependencies required by those executables. Parent directories needed only to reach an allowed path receive traversal metadata access rather than ordinary data-read access. Runtime authority never becomes writable authority, `filesystem.deny` remains higher priority, and runtime support is not a route to host credential stores or local service sockets.
 
 Agent Helm-managed values such as `HOME` and `TMPDIR` are supplied by the runtime.
 
@@ -136,7 +136,7 @@ execution:
 
 `deny` removes configured access.
 
-`allowLocalBinding` separately controls whether local TCP listeners may be created and is disabled by default.
+`allowLocalBinding` separately controls whether local TCP listeners may be created and is disabled by default. Filesystem access does not by itself authorize arbitrary host Unix sockets; local socket access remains separately constrained by the execution Sandbox.
 
 Workspace-level rules are resolved together with user-level policy according to the configuration model.
 

@@ -111,11 +111,11 @@ Execution uses Agent Helm-managed `HOME` and temporary directories.
 
 The complete host environment is not copied into child processes. `PATH` is retained for executable resolution, while additional host environment variables are controlled by policy.
 
-Command text cannot authorize its own Sandbox bypass.
+Command text cannot authorize its own Sandbox bypass. Broad filesystem grants also do not override protected Agent Helm control data or common host credential locations.
 
 ### Runtime substrate
 
-Core captures a bounded runtime substrate from the daemon environment. This separates executable/toolchain read authority from project data authority: captured `PATH` directories, audited runtime-manager/package-manager roots, and required native/shebang closure remain read-only and are composed with the selected execution context at command time.
+Core captures bounded read-only runtime support from the daemon environment. This separates executable/toolchain authority from project data authority: captured `PATH` directories, audited runtime/toolchain roots, and required native or script dependencies are composed with the selected execution context at command time. Parent directories needed only for traversal do not become ordinary data-read authority, and host credentials or local service sockets are not promoted into runtime support.
 
 Runtime discovery is cached persistently under `~/.agent-helm/runtime-cache/`. On startup, unchanged captured `PATH` entries reuse their cached scan, while changed entries are rescanned. Cache reuse is conditional on the relevant filesystem and executable-resolution fingerprints still matching; it is not an unconditional reuse of old authority.
 

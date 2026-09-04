@@ -180,7 +180,7 @@ The selected Workspace or work path is the primary execution scope.
 
 `filesystem.readOnly` adds explicitly configured paths as read-only authority.
 
-`filesystem.allow` adds explicitly configured read/write paths.
+`filesystem.allow` adds explicitly configured read/write paths. It does not override protected Agent Helm control data or common host credential locations.
 
 `filesystem.deny` removes access to configured paths and remains restrictive when it overlaps either read-only or read/write authority.
 
@@ -218,7 +218,7 @@ Agent Helm-managed variables such as `HOME` and `TMPDIR` are not intended to be 
 
 `execution.runtime.roots` adds explicit read-only runtime/toolchain roots that commands may need in order to start or load dependencies.
 
-Runtime roots are separate from project/data filesystem authority: they do not become writable, and they do not behave like `filesystem.allow`.
+Runtime roots are separate from project/data filesystem authority: they do not become writable, they do not behave like `filesystem.allow`, and they are intended for executable/toolchain support rather than host credentials or local service integrations.
 
 At Workspace level, relative runtime roots are resolved against the selected working copy.
 
@@ -272,7 +272,7 @@ Agent Helm supplies managed execution values for `HOME` and temporary directorie
 
 `PATH` is retained for executable resolution.
 
-The complete daemon environment is not copied automatically into child commands.
+The complete daemon environment is not copied automatically into child commands. Credential-bearing or control-plane environment values are not treated as ordinary command environment grants.
 
 ### Network
 
