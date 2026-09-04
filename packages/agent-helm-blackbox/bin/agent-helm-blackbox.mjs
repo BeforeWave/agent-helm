@@ -210,9 +210,10 @@ async function waitForNotificationCount(readCount, minimum, label) {
 
 async function runDynamicAccessStateScenario({ root, workspace }) {
   const scenarioRoot = mkdtempSync(join(root, 'agent-helm-live-access-'))
+  const scenarioSocketRoot = mkdtempSync(join(process.platform === 'darwin' ? '/tmp' : tmpdir(), 'ahbb-sock-'))
   const scenarioHome = join(scenarioRoot, 'home')
   const scenarioConfig = join(scenarioRoot, 'config.yml')
-  const scenarioSocket = join(scenarioRoot, 'daemon.sock')
+  const scenarioSocket = join(scenarioSocketRoot, 'd.sock')
   const scenarioStateDir = join(scenarioHome, '.agent-helm')
   const scenarioPort = await freePort()
   const scenarioToken = randomBytes(24).toString('base64url')
@@ -355,6 +356,7 @@ async function runDynamicAccessStateScenario({ root, workspace }) {
     await scenarioClient?.close().catch(() => {})
     terminateProcessTree(scenarioChild)
     await waitForExit(scenarioChild)
+    rmSync(scenarioSocketRoot, { recursive: true, force: true })
     rmSync(scenarioRoot, { recursive: true, force: true })
   }
 }
@@ -365,6 +367,9 @@ const configDir = join(scratch, 'config')
 const configFile = join(configDir, 'config.yml')
 const socket = join(scratch, 'daemon.sock')
 const outsideFile = join(scratch, 'outside-command-scope.txt')
+const broadAllowedDir = join(scratch, 'broad-allowed')
+const broadAllowedFile = join(broadAllowedDir, 'ordinary.txt')
+const credentialFile = join(broadAllowedDir, 'control-token')
 const token = randomBytes(24).toString('base64url')
 const port = await freePort()
 const mcpUrl = `http://127.0.0.1:${port}/mcp`
@@ -372,14 +377,19 @@ const correlation = `agent-helm-blackbox-${randomBytes(8).toString('hex')}`
 
 mkdirSync(workspace, { recursive: true })
 mkdirSync(configDir, { recursive: true })
+mkdirSync(broadAllowedDir, { recursive: true })
 writeFileSync(join(workspace, 'probe.txt'), 'agent-helm-mcp-blackbox\n')
 writeFileSync(outsideFile, 'outside\n')
+writeFileSync(broadAllowedFile, 'ordinary\n')
+writeFileSync(credentialFile, 'credential-sentinel\n')
 writeFileSync(configFile, `${JSON.stringify({
   workspaces: [{ path: workspace, title: 'agent-helm-blackbox-fixture' }],
   mcp: {
     external: { command: true, semantic: false, read_only: false, delegate: false },
     native: { semantic: false, delegate: false },
   },
+  http: { tokenFile: credentialFile },
+  execution: { filesystem: { allow: [broadAllowedDir] } },
   tunnel: { enabled: false },
 }, null, 2)}\n`)
 
@@ -490,6 +500,11 @@ try {
   check('command_execute can remove a workspace file', remove.isError !== true && commandResult(remove)?.return_code === 0, resultDetail(remove))
 
   const outside = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(outsideFile)}`, purpose: 'Verify MCP workspace read boundary' }, { validate: false })
+  const broadAllowedRead = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(broadAllowedFile)}`, purpose: 'Verify configured broad filesystem grant is active' })
+  const credentialReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+  const credentialRead = await call('command_execute', { context_id: contextId, command: credentialReadCommand, purpose: 'Verify credential terminal read deny overrides a broader configured grant' })
+  const credentialWriteCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+  const credentialWrite = await call('command_execute', { context_id: contextId, command: credentialWriteCommand, purpose: 'Verify credential terminal write deny overrides a broader configured grant' })
   const configReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
   const configRead = await call('command_execute', { context_id: contextId, command: configReadCommand, purpose: 'Verify Agent Helm control configuration is not command-readable by default' })
   const originalConfig = readFileSync(configFile, 'utf8')
@@ -499,6 +514,15 @@ try {
     'command_execute enforces workspace and Agent Helm control-config boundaries',
     outside.isError === true
       && errorCode(outside) === 'shell_path_not_allowed'
+      && broadAllowedRead.isError !== true
+      && commandResult(broadAllowedRead)?.stdout?.trim() === 'ordinary'
+      && credentialRead.isError !== true
+      && commandResult(credentialRead)?.return_code === 0
+      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(credentialRead)?.stdout?.trim() ?? '')
+      && credentialWrite.isError !== true
+      && commandResult(credentialWrite)?.return_code === 0
+      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(credentialWrite)?.stdout?.trim() ?? '')
+      && readFileSync(credentialFile, 'utf8') === 'credential-sentinel\n'
       && configRead.isError !== true
       && commandResult(configRead)?.return_code === 0
       && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configRead)?.stdout?.trim() ?? '')
@@ -506,7 +530,7 @@ try {
       && commandResult(configWrite)?.return_code === 0
       && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configWrite)?.stdout?.trim() ?? '')
       && readFileSync(configFile, 'utf8') === originalConfig,
-    'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' read=' + resultDetail(configRead) + ' write=' + resultDetail(configWrite),
+    'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' broad=' + resultDetail(broadAllowedRead) + ' credentialRead=' + resultDetail(credentialRead) + ' credentialWrite=' + resultDetail(credentialWrite) + ' configRead=' + resultDetail(configRead) + ' configWrite=' + resultDetail(configWrite),
   )
 
   const destructive = await call('command_execute', { context_id: contextId, command: 'git reset --hard HEAD~1', purpose: 'Verify MCP destructive command guardrail' }, { validate: false })

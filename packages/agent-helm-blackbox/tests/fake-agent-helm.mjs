@@ -96,6 +96,8 @@ const config = JSON.parse(readFileSync(configFile, 'utf8'))
 const workspace = config.workspaces?.find((entry) => entry.title === 'agent-helm-blackbox-fixture')
 if (!workspace?.path) process.exit(4)
 const protectedConfigDir = dirname(configFile)
+const configuredCredentialFile = config.http?.tokenFile
+const configuredFilesystemAllow = config.execution?.filesystem?.allow ?? []
 const workspaceInsideProtectedConfigDir = workspace.path === protectedConfigDir || workspace.path.startsWith(protectedConfigDir + sep)
 const workspaceId = 'workspace-blackbox-fixture'
 const configured = config.mcp?.external ?? { command: true, semantic: true, read_only: false, delegate: true }
@@ -179,6 +181,9 @@ function protocol() {
       }
       if (command.includes('fs.readFileSync') && command.includes(configFile)) return commandOutput('denied:EPERM\n')
       if (command.includes('fs.writeFileSync') && command.includes(configFile)) return commandOutput('denied:EPERM\n')
+      if (configuredCredentialFile && command.includes('fs.readFileSync') && command.includes(configuredCredentialFile)) return commandOutput('denied:EPERM\n')
+      if (configuredCredentialFile && command.includes('fs.writeFileSync') && command.includes(configuredCredentialFile)) return commandOutput('denied:EPERM\n')
+      if (command.startsWith('cat ') && configuredFilesystemAllow.some((root) => command.includes(root))) return commandOutput('ordinary\n')
       if (command.startsWith('cat ')) return toolError('shell_path_not_allowed')
       if (command === 'git reset --hard HEAD~1') return toolError('destructive_command_denied')
     }

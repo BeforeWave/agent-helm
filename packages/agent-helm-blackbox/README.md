@@ -98,13 +98,10 @@ With `AGENT_HELM_BLACKBOX_STATE_HOME`, the same runner additionally verifies liv
 
 This package is the canonical source for installed-package MCP black-box cases. Repository verification invokes this runner rather than maintaining a second black-box case list. Internal simulated protocol tests may overlap behavior, but they are not the black-box contract.
 
-The runner prints the number of MCP checks it actually executed in its final success line, for example:
+The runner prints the number of MCP checks it actually executed in its final success line. The exact count may grow as the canonical contract expands; the success line has this shape:
 
 ```text
-Agent Helm MCP black-box OK (53 checks)
-
-# with AGENT_HELM_BLACKBOX_STATE_HOME
-Agent Helm MCP black-box OK (76 checks)
+Agent Helm MCP black-box OK (N checks)
 ```
 
 `npm test` for this package is only the runner's own self-test against a fake MCP target, so its Node test count is not the black-box case count.
