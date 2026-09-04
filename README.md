@@ -62,27 +62,55 @@ It can then keep editing and validating based on what actually happened, rather 
 
 ## Quick Start
 
-Install Agent Helm:
+### Install Agent Helm
 
-```bash id="0f20as"
-npm install -g agent-helm
-```
+Stable npm release:
+
+\`\`\`bash
+npm install -g @beforewave/agent-helm
+\`\`\`
+
+GitHub install on macOS / Linux:
+
+\`\`\`bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh
+\`\`\`
+
+Install a specific version:
+
+\`\`\`bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh -s -- 0.1.4
+\`\`\`
+
+Windows x64:
+
+\`\`\`powershell
+irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1 | iex
+\`\`\`
+
+Install a specific version:
+
+\`\`\`powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1))) -Version 0.1.4
+\`\`\`
+
+The GitHub installer supports macOS and Windows x64. It reuses Node.js 22+ when available and otherwise installs an Agent Helm-managed Node runtime without changing the system Node.js installation.
 
 Run setup:
 
-```bash id="l0m918"
+\`\`\`bash
 agent-helm setup
-```
+\`\`\`
 
-`agent-helm setup` handles the environment checks and connection setup required to run Agent Helm.
+\`agent-helm setup\` handles the environment checks and connection setup required to run Agent Helm.
 
 Then enter the project you want to use:
 
-```bash id="6qw150"
+\`\`\`bash
 cd /path/to/project
 agent-helm workspace add
 agent-helm start
-```
+\`\`\`
 
 Once connected, go back to ChatGPT in your browser and start working directly with that project.
 
@@ -90,19 +118,19 @@ Once connected, go back to ChatGPT in your browser and start working directly wi
 
 If you prefer to handle installation, connection, and day-to-day management from the browser:
 
-```bash id="tsjl3d"
+\`\`\`bash
 agent-helm setup chrome
-```
+\`\`\`
 
 You can also use the [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions).
 
 ### Common Commands
 
-```bash id="ftr835"
+\`\`\`bash
 agent-helm status
 agent-helm doctor
 agent-helm stop
-```
+\`\`\`
 
 ## Work History
 

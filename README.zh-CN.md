@@ -64,27 +64,55 @@ ChatGPT 可以继续查看任务执行后的真实状态，包括：
 
 ## 快速开始
 
-安装 Agent Helm：
+### 安装 Agent Helm
 
-```bash id="r238jh"
-npm install -g agent-helm
-```
+npm 稳定版：
+
+\`\`\`bash
+npm install -g @beforewave/agent-helm
+\`\`\`
+
+macOS / Linux 从 GitHub 安装：
+
+\`\`\`bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh
+\`\`\`
+
+指定版本：
+
+\`\`\`bash
+curl -fsSL https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.sh | sh -s -- 0.1.4
+\`\`\`
+
+Windows x64：
+
+\`\`\`powershell
+irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1 | iex
+\`\`\`
+
+指定版本：
+
+\`\`\`powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install.ps1))) -Version 0.1.4
+\`\`\`
+
+GitHub 安装入口支持 macOS 和 Windows x64。已有 Node.js 22+ 时直接复用；否则安装 Agent Helm 自己管理的 Node runtime，不修改系统 Node.js。
 
 运行 Setup：
 
-```bash id="c1wcm7"
+\`\`\`bash
 agent-helm setup
-```
+\`\`\`
 
-`agent-helm setup` 会完成 Agent Helm 运行所需的环境检查和连接配置。
+\`agent-helm setup\` 会完成 Agent Helm 运行所需的环境检查和连接配置。
 
 然后进入你希望使用的项目：
 
-```bash id="es423m"
+\`\`\`bash
 cd /path/to/project
 agent-helm workspace add
 agent-helm start
-```
+\`\`\`
 
 完成连接后，回到浏览器里的 ChatGPT，就可以直接基于这个项目开始工作。
 
@@ -92,19 +120,19 @@ agent-helm start
 
 如果希望通过浏览器完成安装、连接和日常管理：
 
-```bash id="da5v83"
+\`\`\`bash
 agent-helm setup chrome
-```
+\`\`\`
 
 也可以使用 [Agent Helm Chrome Extension](https://github.com/BeforeWave/agent-helm-extensions)。
 
 ### 常用命令
 
-```bash id="ux01t7"
+\`\`\`bash
 agent-helm status
 agent-helm doctor
 agent-helm stop
-```
+\`\`\`
 
 ## Work History
 
