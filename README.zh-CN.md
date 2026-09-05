@@ -14,7 +14,14 @@
 </div>
 
 <br />
-
+<p align="center">
+  <sub>
+    Try
+    <a href="https://github.com/BeforeWave/agent-helm-extensions"><b>Agent Helm Extensions</b></a> · Chrome experience
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <a href="https://github.com/BeforeWave/dsh-with-chatgpt"><b>DSH with ChatGPT</b></a> · DSH integration
+  </sub>
+</p>
 <p align="center">
   <img width="1000" alt="Agent Helm" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
 </p>
