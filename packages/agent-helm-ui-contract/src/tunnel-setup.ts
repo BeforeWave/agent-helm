@@ -1,6 +1,7 @@
 export const tunnelSetupLinks = {
   tunnels: 'https://platform.openai.com/settings/organization/tunnels',
   runtimeApiKeys: 'https://platform.openai.com/settings/organization/api-keys',
+  organization: 'https://platform.openai.com/settings/organization/general',
   roles: 'https://platform.openai.com/settings/organization/people/roles',
   developerMode: 'https://chatgpt.com/#settings/Connectors/Advanced',
   connectors: 'https://chatgpt.com/#settings/Connectors',
@@ -20,6 +21,7 @@ export type TunnelOnboardingTextKey =
   | 'tunnelIdLabel'
   | 'organizationIdLabel'
   | 'runtimeApiKeyLabel'
+  | 'fieldGet'
   | 'runtimeApiKeyPlaceholder'
   | 'tunnelProxyLabel'
   | 'tunnelProxyPlaceholder'
@@ -56,34 +58,17 @@ export interface TunnelOnboardingLinkAction {
 export const tunnelOnboardingSource = {
   id: 'chatgpt-tunnel',
   title: { key: 'tunnelSetupTitle', defaultText: 'Configure ChatGPT Tunnel' },
-  description: { key: 'tunnelSetupDescription', defaultText: 'Complete these three steps. Agent Helm handles installation and local configuration for you.' },
+  description: { key: 'tunnelSetupDescription', defaultText: 'Enter the connection settings first. Values that come from OpenAI can be opened directly beside each field.' },
   steps: [
     {
-      id: 'openai-configuration',
-      title: { key: 'tunnelSetupStep1', defaultText: '1. Get OpenAI configuration' },
-      description: { key: 'tunnelSetupStep1Description', defaultText: 'Get the Tunnel ID, then create a Restricted Runtime API Key with Tunnels Read + Use.' },
-      links: [
-        { id: 'tunnels', label: { key: 'openTunnels', defaultText: 'Open Tunnels' }, href: tunnelSetupLinks.tunnels },
-        { id: 'runtimeApiKeys', label: { key: 'createRuntimeApiKey', defaultText: 'Create Runtime API Key' }, href: tunnelSetupLinks.runtimeApiKeys },
-        { id: 'roles', label: { key: 'openTunnelRoles', defaultText: 'Configure permissions' }, href: tunnelSetupLinks.roles },
-      ],
-      dependency: {
-        id: 'tunnelClient',
-        required: { key: 'tunnelClientRequired', defaultText: 'tunnel-client is missing. Choose Authorize & install below.' },
-        installDescription: { key: 'tunnelClientInstallDescription', defaultText: 'Agent Helm downloads the pinned release, verifies it, and installs it automatically. No manual file-permission step is required.' },
-        installAction: { key: 'authorizeInstallTunnelClient', defaultText: 'Authorize & install tunnel-client' },
-        installing: { key: 'installing', defaultText: 'Installing…' },
-        downloadAction: { id: 'tunnelClientRelease', label: { key: 'downloadTunnelClient', defaultText: 'Manual download (fallback)' }, href: tunnelSetupLinks.tunnelClientRelease },
-      },
-    },
-    {
       id: 'agent-helm-configuration',
-      title: { key: 'tunnelSetupStep2', defaultText: '2. Configure Agent Helm' },
-      description: { key: 'tunnelSetupStep2Description', defaultText: 'Enter the Tunnel ID and Runtime API Key. Organization ID is usually optional. You can also save an HTTP/HTTPS Tunnel proxy when Chrome or DSH cannot inherit your shell proxy.' },
+      title: { key: 'tunnelSetupStep1', defaultText: '1. Configure Agent Helm' },
+      description: { key: 'tunnelSetupStep1Description', defaultText: 'Required settings come first, followed by optional settings.' },
+      getAction: { key: 'fieldGet', defaultText: 'Get' },
       fields: [
-        { id: 'tunnelId', label: { key: 'tunnelIdLabel', defaultText: 'Tunnel ID' }, required: true, secret: false },
-        { id: 'organizationId', label: { key: 'organizationIdLabel', defaultText: 'Organization ID (optional)' }, required: false, secret: false },
-        { id: 'apiKey', label: { key: 'runtimeApiKeyLabel', defaultText: 'Runtime API Key' }, required: true, secret: true, savedPlaceholder: { key: 'runtimeApiKeyPlaceholder', defaultText: 'Leave blank to keep the saved key' } },
+        { id: 'tunnelId', label: { key: 'tunnelIdLabel', defaultText: 'Tunnel ID' }, required: true, secret: false, helpLink: { id: 'tunnels', href: tunnelSetupLinks.tunnels } },
+        { id: 'apiKey', label: { key: 'runtimeApiKeyLabel', defaultText: 'Runtime API Key' }, required: true, secret: true, savedPlaceholder: { key: 'runtimeApiKeyPlaceholder', defaultText: 'Leave blank to keep the saved key' }, helpLink: { id: 'runtimeApiKeys', href: tunnelSetupLinks.runtimeApiKeys } },
+        { id: 'organizationId', label: { key: 'organizationIdLabel', defaultText: 'Organization ID (optional)' }, required: false, secret: false, helpLink: { id: 'organization', href: tunnelSetupLinks.organization } },
         { id: 'proxyUrl', label: { key: 'tunnelProxyLabel', defaultText: 'Tunnel proxy URL (optional)' }, required: false, secret: false, savedPlaceholder: { key: 'tunnelProxyPlaceholder', defaultText: 'http://127.0.0.1:7890' } },
       ],
       configuredNote: { key: 'tunnelApiKeyConfigured', defaultText: 'Runtime API Key configured' },
@@ -93,6 +78,22 @@ export const tunnelOnboardingSource = {
       storageNote: { key: 'tunnelSetupStoredLocally', defaultText: 'Saved locally by Agent Helm. The Runtime API Key is not shown again.' },
       submitAction: { key: 'saveAndConnect', defaultText: 'Save & Connect' },
       submitting: { key: 'savingTunnelSetup', defaultText: 'Saving…' },
+    },
+    {
+      id: 'openai-guidance',
+      title: { key: 'tunnelSetupStep2', defaultText: '2. Permissions and dependency' },
+      description: { key: 'tunnelSetupStep2Description', defaultText: 'The Runtime API Key needs Tunnels Read + Use. OpenAI tunnel-client is required for the ChatGPT Tunnel connection.' },
+      links: [
+        { id: 'roles', label: { key: 'openTunnelRoles', defaultText: 'View permission settings' }, href: tunnelSetupLinks.roles },
+      ],
+      dependency: {
+        id: 'tunnelClient',
+        required: { key: 'tunnelClientRequired', defaultText: 'OpenAI tunnel-client is required.' },
+        installDescription: { key: 'tunnelClientInstallDescription', defaultText: 'Agent Helm uses an available tunnel-client from the system path first. Otherwise it downloads and verifies the compatible version from the official OpenAI release. On macOS it also completes the required run authorization; Windows uses the corresponding install flow.' },
+        installAction: { key: 'authorizeInstallTunnelClient', defaultText: 'Authorize & install tunnel-client' },
+        installing: { key: 'installing', defaultText: 'Installing…' },
+        downloadAction: { id: 'tunnelClientRelease', label: { key: 'downloadTunnelClient', defaultText: 'OpenAI official releases' }, href: tunnelSetupLinks.tunnelClientRelease },
+      },
     },
     {
       id: 'chatgpt-connection',
@@ -105,7 +106,6 @@ export const tunnelOnboardingSource = {
     },
   ],
 } as const
-
 export function tunnelOnboardingRequired(input: TunnelSetupProjection & { missingEnvironment?: readonly string[] }): boolean {
   return !input.tunnelId || !input.apiKeyConfigured || Boolean(input.missingEnvironment?.length)
 }

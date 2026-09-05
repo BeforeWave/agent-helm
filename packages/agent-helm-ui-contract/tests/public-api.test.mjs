@@ -6,6 +6,8 @@ import {
   deriveHelmConnectionHealth,
   normalizeWorkHistorySession,
   normalizeWorkHistoryTimelinePresentation,
+  tunnelOnboardingSource,
+  tunnelSetupLinks,
   workHistoryTimelinePurpose,
 } from '../lib/index.js'
 
@@ -104,4 +106,18 @@ test('Work History timeline purpose reads the canonical purpose argument', () =>
   assert.equal(workHistoryTimelinePurpose({ arguments: { purpose: ' inspect registry ' } }), 'inspect registry')
   assert.equal(workHistoryTimelinePurpose({ arguments: { purpose: '   ' } }), undefined)
   assert.equal(workHistoryTimelinePurpose({ purpose: 'wrong level' }), undefined)
+})
+
+test('Tunnel onboarding puts required configuration first with inline OpenAI acquisition links', () => {
+  const [configuration, guidance, connection] = tunnelOnboardingSource.steps
+  assert.equal(configuration.id, 'agent-helm-configuration')
+  assert.deepEqual(configuration.fields.map((field) => field.id), ['tunnelId', 'apiKey', 'organizationId', 'proxyUrl'])
+  assert.deepEqual(configuration.fields.map((field) => field.required), [true, true, false, false])
+  assert.equal(configuration.fields[0].helpLink?.href, tunnelSetupLinks.tunnels)
+  assert.equal(configuration.fields[1].helpLink?.href, tunnelSetupLinks.runtimeApiKeys)
+  assert.equal(configuration.fields[2].helpLink?.href, tunnelSetupLinks.organization)
+  assert.equal(configuration.getAction.key, 'fieldGet')
+  assert.equal(guidance.id, 'openai-guidance')
+  assert.equal(guidance.dependency.downloadAction.href, 'https://github.com/openai/tunnel-client/releases')
+  assert.equal(connection.id, 'chatgpt-connection')
 })
