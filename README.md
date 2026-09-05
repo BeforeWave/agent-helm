@@ -9,7 +9,14 @@
 **Say goodbye to copy-pasting and Token quota anxiety. Let ChatGPT on the web connect directly to your local projects, run code, and call local Coding Agents when needed.**
 
 </div>
-
+<p align="center">
+  <sub>
+    Try
+    <a href="https://github.com/BeforeWave/agent-helm-extensions"><b>Agent Helm Extensions</b></a> · Chrome experience
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <a href="https://github.com/BeforeWave/dsh-with-chatgpt"><b>DSH with ChatGPT</b></a> · DSH integration
+  </sub>
+</p>
 <br />
 
 <p align="center">
