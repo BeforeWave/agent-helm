@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -42,6 +42,31 @@ test('drives the supplied Agent Helm command only through its public MCP interfa
     assert.match(result.stdout, /Delegation disabled gives stale cached delegation calls tool_not_available_on_surface/)
     assert.match(result.stdout, /Delegation restored re-advertises delegated session tools on the same MCP session/)
     assert.match(result.stdout, /all access transitions preserve the original MCP transport session/)
+    assert.match(result.stdout, /Agent Helm MCP black-box OK \(\d+ checks\)/)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('keeps daemon sockets independent from a deeply nested caller TMPDIR', { skip: process.platform === 'win32' }, () => {
+  const home = mkdtempSync(join(tmpdir(), 'agent-helm-blackbox-long-tmp-'))
+  const socketTmp = process.env.AGENT_HELM_BLACKBOX_SOCKET_TMPDIR || tmpdir()
+  const deepTmp = join(home, 'nested-segment-aaaaaaaaaaaaaaaaaaaaaaaa', 'nested-segment-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'nested-segment-cccccccccccccccccccccccccccccccc')
+  mkdirSync(deepTmp, { recursive: true })
+  try {
+    const result = spawnSync(process.execPath, [harness, '--', process.execPath, fakeAgentHelm], {
+      encoding: 'utf8',
+      timeout: 20_000,
+      env: {
+        ...process.env,
+        HOME: home,
+        TMPDIR: deepTmp,
+        AGENT_HELM_BLACKBOX_SOCKET_TMPDIR: socketTmp,
+        AGENT_HELM_BLACKBOX_EXPECT_HOME: home,
+        AGENT_HELM_BLACKBOX_PROBE: 'preserved',
+      },
+    })
+    assert.equal(result.status, 0, result.stderr || result.stdout)
     assert.match(result.stdout, /Agent Helm MCP black-box OK \(\d+ checks\)/)
   } finally {
     rmSync(home, { recursive: true, force: true })

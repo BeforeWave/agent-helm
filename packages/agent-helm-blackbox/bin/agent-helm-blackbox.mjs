@@ -77,6 +77,15 @@ async function waitForExit(child, timeoutMs = 10_000) {
   return { forced: true }
 }
 
+function createShortSocketRoot() {
+  const base = process.env.AGENT_HELM_BLACKBOX_SOCKET_TMPDIR?.trim() || tmpdir()
+  const probe = join(base, 'ahbb-sock-XXXXXX', 'd.sock')
+  if (process.platform !== 'win32' && probe.length >= 100) {
+    throw new Error(`Agent Helm black-box socket temp root is too long for a Unix socket: ${base}. Set AGENT_HELM_BLACKBOX_SOCKET_TMPDIR to a shorter writable temp directory.`)
+  }
+  return mkdtempSync(join(base, 'ahbb-sock-'))
+}
+
 async function freePort() {
   return await new Promise((resolve, reject) => {
     const server = createServer()
@@ -210,7 +219,7 @@ async function waitForNotificationCount(readCount, minimum, label) {
 
 async function runDynamicAccessStateScenario({ root, workspace }) {
   const scenarioRoot = mkdtempSync(join(root, 'agent-helm-live-access-'))
-  const scenarioSocketRoot = mkdtempSync(join(process.platform === 'darwin' ? '/tmp' : tmpdir(), 'ahbb-sock-'))
+  const scenarioSocketRoot = createShortSocketRoot()
   const scenarioHome = join(scenarioRoot, 'home')
   const scenarioConfig = join(scenarioRoot, 'config.yml')
   const scenarioSocket = join(scenarioSocketRoot, 'd.sock')
@@ -362,10 +371,11 @@ async function runDynamicAccessStateScenario({ root, workspace }) {
 }
 
 const scratch = mkdtempSync(join(process.env.TMPDIR || tmpdir(), 'agent-helm-mcp-blackbox-'))
+const socketRoot = createShortSocketRoot()
 const workspace = join(scratch, 'workspace')
 const configDir = join(scratch, 'config')
 const configFile = join(configDir, 'config.yml')
-const socket = join(scratch, 'daemon.sock')
+const socket = join(socketRoot, 'd.sock')
 const outsideFile = join(scratch, 'outside-command-scope.txt')
 const broadAllowedDir = join(scratch, 'broad-allowed')
 const broadAllowedFile = join(broadAllowedDir, 'ordinary.txt')
@@ -633,6 +643,7 @@ try {
   await client?.close().catch(() => {})
   terminateProcessTree(child)
   const finalStop = await waitForExit(child)
+  rmSync(socketRoot, { recursive: true, force: true })
   rmSync(scratch, { recursive: true, force: true })
   if (finalStop.forced) throw new Error('Agent Helm black-box target required SIGKILL during cleanup')
 }
