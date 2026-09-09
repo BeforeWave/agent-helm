@@ -61,13 +61,13 @@ export interface TunnelOnboardingLinkAction {
 
 export const tunnelOnboardingSource = {
   id: 'chatgpt-tunnel',
-  title: { key: 'tunnelSetupTitle', defaultText: 'Configure ChatGPT Tunnel' },
-  description: { key: 'tunnelSetupDescription', defaultText: 'Configure the connection values, confirm the required permission and tunnel-client, then finish ChatGPT setup.' },
+  title: { key: 'tunnelSetupTitle', defaultText: 'Configure ChatGPT Secure Tunnel' },
+  description: { key: 'tunnelSetupDescription', defaultText: 'Configure the connection values, confirm the required permission and tunnel-client, then configure the ChatGPT Plugin.' },
   steps: [
     {
       id: 'agent-helm-configuration',
-      title: { key: 'tunnelSetupStep1', defaultText: '1. Configure Agent Helm' },
-      description: { key: 'tunnelSetupStep1Description', defaultText: 'Enter the Tunnel credentials and optional proxy.' },
+      title: { key: 'tunnelSetupStep1', defaultText: '1. Configure ChatGPT Secure Tunnel' },
+      description: { key: 'tunnelSetupStep1Description', defaultText: 'Enter the ChatGPT Secure Tunnel credentials and optional proxy.' },
       getAction: { key: 'fieldGet', defaultText: 'Get' },
       fields: [
         { id: 'tunnelId', label: { key: 'tunnelIdLabel', defaultText: 'Tunnel ID' }, description: { key: 'tunnelIdDescription', defaultText: 'OpenAI Secure MCP Tunnel ID (tunnel_…) identifying the Tunnel to connect through.' }, required: true, secret: false, helpLink: { id: 'tunnels', href: tunnelSetupLinks.tunnels } },
@@ -86,7 +86,7 @@ export const tunnelOnboardingSource = {
     },
     {
       id: 'openai-guidance',
-      title: { key: 'tunnelSetupStep2', defaultText: '2. Permissions and dependency' },
+      title: { key: 'tunnelSetupStep2', defaultText: '2. Permissions & Runtime' },
       description: { key: 'tunnelSetupStep2Description', defaultText: 'Runtime API Key needs Tunnels Read + Use. Settings stay local; Agent Helm uses a compatible system tunnel-client or downloads and verifies the OpenAI official release.' },
       links: [],
       dependency: {
@@ -101,8 +101,8 @@ export const tunnelOnboardingSource = {
     },
     {
       id: 'chatgpt-connection',
-      title: { key: 'tunnelSetupStep3', defaultText: '3. Configure ChatGPT' },
-      description: { key: 'tunnelSetupStep3Description', defaultText: 'Enable Developer mode, then add or configure Agent Helm in ChatGPT Connectors.' },
+      title: { key: 'tunnelSetupStep3', defaultText: '3. Configure ChatGPT Plugin' },
+      description: { key: 'tunnelSetupStep3Description', defaultText: 'Enable Developer mode, then add or configure the Agent Helm plugin in ChatGPT Connectors.' },
       links: [
         { id: 'developerMode', label: { key: 'openChatGptDeveloperMode', defaultText: 'Open Developer mode' }, href: tunnelSetupLinks.developerMode },
         { id: 'connectors', label: { key: 'openChatGptConnectors', defaultText: 'Open ChatGPT Connectors' }, href: tunnelSetupLinks.connectors },
