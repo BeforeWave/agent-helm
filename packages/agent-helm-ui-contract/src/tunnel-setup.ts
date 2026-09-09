@@ -2,7 +2,6 @@ export const tunnelSetupLinks = {
   tunnels: 'https://platform.openai.com/settings/organization/tunnels',
   runtimeApiKeys: 'https://platform.openai.com/settings/organization/api-keys',
   organization: 'https://platform.openai.com/settings/organization/general',
-  roles: 'https://platform.openai.com/settings/organization/people/roles',
   developerMode: 'https://chatgpt.com/#settings/Connectors/Advanced',
   connectors: 'https://chatgpt.com/#settings/Connectors',
   tunnelClientRelease: 'https://github.com/openai/tunnel-client/releases',
@@ -19,22 +18,27 @@ export type TunnelOnboardingTextKey =
   | 'tunnelSetupStep3'
   | 'tunnelSetupStep3Description'
   | 'tunnelIdLabel'
+  | 'tunnelIdDescription'
   | 'organizationIdLabel'
+  | 'organizationIdDescription'
   | 'runtimeApiKeyLabel'
+  | 'runtimeApiKeyDescription'
   | 'fieldGet'
   | 'runtimeApiKeyPlaceholder'
   | 'tunnelProxyLabel'
+  | 'tunnelProxyDescription'
   | 'tunnelProxyPlaceholder'
   | 'tunnelProxyConfigured'
   | 'tunnelProxyNotConfigured'
   | 'saveAndConnect'
+  | 'saveTunnelSetup'
   | 'savingTunnelSetup'
   | 'openTunnels'
   | 'createRuntimeApiKey'
-  | 'openTunnelRoles'
   | 'openChatGptDeveloperMode'
   | 'openChatGptConnectors'
-  | 'authorizeInstallTunnelClient'
+  | 'installTunnelClient'
+  | 'tunnelClientInstalled'
   | 'tunnelClientInstallDescription'
   | 'tunnelClientRequired'
   | 'downloadTunnelClient'
@@ -58,47 +62,47 @@ export interface TunnelOnboardingLinkAction {
 export const tunnelOnboardingSource = {
   id: 'chatgpt-tunnel',
   title: { key: 'tunnelSetupTitle', defaultText: 'Configure ChatGPT Tunnel' },
-  description: { key: 'tunnelSetupDescription', defaultText: 'Enter the connection settings first. Values that come from OpenAI can be opened directly beside each field.' },
+  description: { key: 'tunnelSetupDescription', defaultText: 'Configure the connection values, confirm the required permission and tunnel-client, then finish ChatGPT setup.' },
   steps: [
     {
       id: 'agent-helm-configuration',
       title: { key: 'tunnelSetupStep1', defaultText: '1. Configure Agent Helm' },
-      description: { key: 'tunnelSetupStep1Description', defaultText: 'Required settings come first, followed by optional settings.' },
+      description: { key: 'tunnelSetupStep1Description', defaultText: 'Enter the Tunnel credentials and optional proxy.' },
       getAction: { key: 'fieldGet', defaultText: 'Get' },
       fields: [
-        { id: 'tunnelId', label: { key: 'tunnelIdLabel', defaultText: 'Tunnel ID' }, required: true, secret: false, helpLink: { id: 'tunnels', href: tunnelSetupLinks.tunnels } },
-        { id: 'apiKey', label: { key: 'runtimeApiKeyLabel', defaultText: 'Runtime API Key' }, required: true, secret: true, savedPlaceholder: { key: 'runtimeApiKeyPlaceholder', defaultText: 'Leave blank to keep the saved key' }, helpLink: { id: 'runtimeApiKeys', href: tunnelSetupLinks.runtimeApiKeys } },
-        { id: 'organizationId', label: { key: 'organizationIdLabel', defaultText: 'Organization ID (optional)' }, required: false, secret: false, helpLink: { id: 'organization', href: tunnelSetupLinks.organization } },
-        { id: 'proxyUrl', label: { key: 'tunnelProxyLabel', defaultText: 'Tunnel proxy URL (optional)' }, required: false, secret: false, savedPlaceholder: { key: 'tunnelProxyPlaceholder', defaultText: 'http://127.0.0.1:7890' } },
+        { id: 'tunnelId', label: { key: 'tunnelIdLabel', defaultText: 'Tunnel ID' }, description: { key: 'tunnelIdDescription', defaultText: 'OpenAI Secure MCP Tunnel ID (tunnel_…) identifying the Tunnel to connect through.' }, required: true, secret: false, helpLink: { id: 'tunnels', href: tunnelSetupLinks.tunnels } },
+        { id: 'apiKey', label: { key: 'runtimeApiKeyLabel', defaultText: 'Runtime API Key' }, description: { key: 'runtimeApiKeyDescription', defaultText: 'Restricted API key used by tunnel-client to access the Tunnel. Requires Tunnels Read + Use; required on first save and never shown again.' }, required: true, secret: true, savedPlaceholder: { key: 'runtimeApiKeyPlaceholder', defaultText: '••••••••••••••••' }, helpLink: { id: 'runtimeApiKeys', href: tunnelSetupLinks.runtimeApiKeys } },
+        { id: 'organizationId', label: { key: 'organizationIdLabel', defaultText: 'Organization ID (optional)' }, description: { key: 'organizationIdDescription', defaultText: 'OpenAI Organization ID. Usually leave blank; set it only when you need to select an organization explicitly.' }, required: false, secret: false, helpLink: { id: 'organization', href: tunnelSetupLinks.organization } },
+        { id: 'proxyUrl', label: { key: 'tunnelProxyLabel', defaultText: 'Tunnel proxy URL (optional)' }, description: { key: 'tunnelProxyDescription', defaultText: 'HTTP/HTTPS proxy used only by tunnel-client to reach the OpenAI Tunnel, for example http://127.0.0.1:7890.' }, required: false, secret: false, savedPlaceholder: { key: 'tunnelProxyPlaceholder', defaultText: 'http://127.0.0.1:7890' } },
       ],
       configuredNote: { key: 'tunnelApiKeyConfigured', defaultText: 'Runtime API Key configured' },
       missingNote: { key: 'tunnelApiKeyMissing', defaultText: 'Runtime API Key not configured' },
       proxyConfiguredNote: { key: 'tunnelProxyConfigured', defaultText: 'Tunnel proxy configured' },
       proxyMissingNote: { key: 'tunnelProxyNotConfigured', defaultText: 'Tunnel proxy not configured' },
       storageNote: { key: 'tunnelSetupStoredLocally', defaultText: 'Saved locally by Agent Helm. The Runtime API Key is not shown again.' },
+      saveAction: { key: 'saveTunnelSetup', defaultText: 'Save' },
       submitAction: { key: 'saveAndConnect', defaultText: 'Save & Connect' },
       submitting: { key: 'savingTunnelSetup', defaultText: 'Saving…' },
     },
     {
       id: 'openai-guidance',
       title: { key: 'tunnelSetupStep2', defaultText: '2. Permissions and dependency' },
-      description: { key: 'tunnelSetupStep2Description', defaultText: 'The Runtime API Key needs Tunnels Read + Use. OpenAI tunnel-client is required for the ChatGPT Tunnel connection.' },
-      links: [
-        { id: 'roles', label: { key: 'openTunnelRoles', defaultText: 'View permission settings' }, href: tunnelSetupLinks.roles },
-      ],
+      description: { key: 'tunnelSetupStep2Description', defaultText: 'Runtime API Key needs Tunnels Read + Use. Settings stay local; Agent Helm uses a compatible system tunnel-client or downloads and verifies the OpenAI official release.' },
+      links: [],
       dependency: {
         id: 'tunnelClient',
         required: { key: 'tunnelClientRequired', defaultText: 'OpenAI tunnel-client is required.' },
-        installDescription: { key: 'tunnelClientInstallDescription', defaultText: 'Agent Helm uses an available tunnel-client from the system path first. Otherwise it downloads and verifies the compatible version from the official OpenAI release. On macOS it also completes the required run authorization; Windows uses the corresponding install flow.' },
-        installAction: { key: 'authorizeInstallTunnelClient', defaultText: 'Authorize & install tunnel-client' },
+        installDescription: { key: 'tunnelClientInstallDescription', defaultText: 'Agent Helm uses a compatible system tunnel-client first; otherwise it downloads and verifies the official release.' },
+        installAction: { key: 'installTunnelClient', defaultText: 'Install tunnel-client' },
+        installedAction: { key: 'tunnelClientInstalled', defaultText: 'tunnel-client installed' },
         installing: { key: 'installing', defaultText: 'Installing…' },
         downloadAction: { id: 'tunnelClientRelease', label: { key: 'downloadTunnelClient', defaultText: 'OpenAI official releases' }, href: tunnelSetupLinks.tunnelClientRelease },
       },
     },
     {
       id: 'chatgpt-connection',
-      title: { key: 'tunnelSetupStep3', defaultText: '3. Finish the ChatGPT connection' },
-      description: { key: 'tunnelSetupStep3Description', defaultText: 'After Tunnel connects, enable ChatGPT Developer mode, then create or configure the Connector.' },
+      title: { key: 'tunnelSetupStep3', defaultText: '3. Configure ChatGPT' },
+      description: { key: 'tunnelSetupStep3Description', defaultText: 'Enable Developer mode, then add or configure Agent Helm in ChatGPT Connectors.' },
       links: [
         { id: 'developerMode', label: { key: 'openChatGptDeveloperMode', defaultText: 'Open Developer mode' }, href: tunnelSetupLinks.developerMode },
         { id: 'connectors', label: { key: 'openChatGptConnectors', defaultText: 'Open ChatGPT Connectors' }, href: tunnelSetupLinks.connectors },
