@@ -6,19 +6,42 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { AjvJsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/ajv'
+import { MCP_BLACKBOX_E2E_BATCHES } from '../support/blackbox-batches.mjs'
+import { connectMcpClient as connectClient, enableLoopbackProxyBypass, mcpErrorCode as errorCode, mcpResultDetail as resultDetail, rawMcpRequest, rpc, sameNames } from '../support/mcp-test-client.mjs'
+import { readMcpTestTargetState, requestMcpTestTargetControl, requestMcpTestTargetRestart } from '../support/mcp-test-target.mjs'
+
+enableLoopbackProxyBypass()
 
 const argv = process.argv.slice(2)
 const separator = argv.indexOf('--')
-if (separator < 0 || separator === argv.length - 1) {
-  console.error('Usage: agent-helm-blackbox -- <agent-helm command...>')
+let requestedBatch
+let attachedTargetFile
+const optionEnd = separator >= 0 ? separator : argv.length
+for (let index = 0; index < optionEnd; index += 1) {
+  const arg = argv[index]
+  if (arg === '--batch') {
+    requestedBatch = argv[++index]
+    if (!requestedBatch || !MCP_BLACKBOX_E2E_BATCHES.includes(requestedBatch)) {
+      throw new Error(`--batch requires one of: ${MCP_BLACKBOX_E2E_BATCHES.join(', ')}`)
+    }
+  } else if (arg === '--attached-target') {
+    attachedTargetFile = argv[++index]
+    if (!attachedTargetFile) throw new Error('--attached-target requires an MCP test target state file')
+  } else {
+    throw new Error(`unknown black-box option: ${arg}`)
+  }
+}
+const attachedTarget = attachedTargetFile ? await readMcpTestTargetState(attachedTargetFile) : undefined
+if (!attachedTarget && (separator < 0 || separator === argv.length - 1)) {
+  console.error('Usage: agent-helm-blackbox [--batch NAME] [--attached-target FILE] -- <agent-helm command...>')
   console.error('Example: agent-helm-blackbox -- npx --yes --package @beforewave/agent-helm@0.1.3 agent-helm')
   process.exit(2)
 }
+const batchEnabled = (batch) => !requestedBatch || requestedBatch === batch
+const baseScenarioEnabled = requestedBatch !== 'access-transitions'
 
-const commandPrefix = argv.slice(separator + 1)
+const commandPrefix = attachedTarget ? [] : argv.slice(separator + 1)
 const executable = commandPrefix[0]
 const prefixArgs = commandPrefix.slice(1)
 const startTimeoutMs = Number(process.env.AGENT_HELM_BLACKBOX_START_TIMEOUT_MS ?? 60_000)
@@ -32,22 +55,8 @@ function check(label, condition, detail = '') {
   if (!condition) throw new Error(label)
 }
 
-function errorCode(result) {
-  const text = result.content?.find((entry) => entry.type === 'text')?.text ?? '{}'
-  try { return JSON.parse(text).error?.code } catch { return undefined }
-}
-
 function commandResult(result) {
   return result.structuredContent?.result
-}
-
-function resultDetail(result) {
-  if (result.isError === true) return `error=${errorCode(result) ?? 'unknown'} ${result.content?.find((entry) => entry.type === 'text')?.text ?? ''}`
-  return JSON.stringify(result.structuredContent ?? result.content ?? null)
-}
-
-function sameNames(actual, expected) {
-  return JSON.stringify([...actual].sort()) === JSON.stringify([...expected].sort())
 }
 
 function terminateProcessTree(child) {
@@ -115,7 +124,7 @@ async function waitForHealth(url, child, stderr) {
   const deadline = Date.now() + startTimeoutMs
   let lastError
   while (Date.now() < deadline) {
-    if (child.exitCode !== null) throw new Error(`Agent Helm target exited during startup with code ${String(child.exitCode)}\n${stderr.text()}`)
+    if (child?.exitCode !== undefined && child.exitCode !== null) throw new Error(`Agent Helm target exited during startup with code ${String(child.exitCode)}\n${stderr.text()}`)
     try {
       const response = await fetch(new URL('/healthz', url), { signal: AbortSignal.timeout(750) })
       if (response.ok) return
@@ -126,33 +135,6 @@ async function waitForHealth(url, child, stderr) {
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
   throw new Error(`Agent Helm MCP did not become ready within ${startTimeoutMs}ms${lastError ? `: ${lastError instanceof Error ? lastError.message : String(lastError)}` : ''}\n${stderr.text()}`)
-}
-
-async function connectClient(url, token, name) {
-  const transport = new StreamableHTTPClientTransport(new URL(url), {
-    requestInit: { headers: { Authorization: `Bearer ${token}` } },
-  })
-  const client = new Client({ name, version: '0.1.0' })
-  await client.connect(transport)
-  return { client, transport }
-}
-
-async function rawMcpRequest(url, token, { method = 'POST', sessionId, body } = {}) {
-  const headers = { Authorization: `Bearer ${token}` }
-  if (body !== undefined) {
-    headers['content-type'] = 'application/json'
-    headers.accept = 'application/json, text/event-stream'
-  }
-  if (sessionId) headers['mcp-session-id'] = sessionId
-  return await fetch(url, {
-    method,
-    headers,
-    ...(body !== undefined ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {}),
-  })
-}
-
-function rpc(method, id = 1, params = {}) {
-  return { jsonrpc: '2.0', id, method, params }
 }
 
 async function nativeControlRequest({ home, socket, method, params = [] }) {
@@ -215,6 +197,56 @@ async function waitForNotificationCount(readCount, minimum, label) {
     await new Promise((resolve) => setTimeout(resolve, 25))
   }
   check(label, false, `count=${readCount()} expected>=${minimum}`)
+}
+
+async function requestAttachedTargetRestart() {
+  if (!attachedTargetFile) throw new Error('attached MCP target state file is unavailable')
+  return await requestMcpTestTargetRestart(attachedTargetFile, attachedTarget, {
+    timeoutMs: startTimeoutMs,
+    waitForHealth: async (nextTarget) => {
+      await waitForHealth(nextTarget.mcpUrl, undefined, new LineBuffer())
+    },
+  })
+}
+
+async function attachedTargetControl(action, parameters = {}) {
+  return await requestMcpTestTargetControl(attachedTarget, action, parameters, Math.min(startTimeoutMs, 15_000))
+}
+
+async function runAttachedAccessStateScenario() {
+  const connected = await connectClient(mcpUrl, token, 'agent-helm-blackbox-external-access')
+  const scenarioClient = connected.client
+  const sessionId = connected.transport.sessionId
+  let toolListChanges = 0
+  try {
+    scenarioClient.fallbackNotificationHandler = (notification) => {
+      if (notification.method === 'notifications/tools/list_changed') toolListChanges += 1
+    }
+    const baseline = await scenarioClient.listTools()
+    const baselineNames = new Set(baseline.tools.map((tool) => tool.name))
+    const workspaceList = await scenarioClient.callTool({ name: 'workspace_list', arguments: {}, _meta: { 'openai/session': correlation } })
+    const fixtureWorkspace = workspaceList.structuredContent?.workspaces?.find((entry) => entry.path === attachedTarget.workspace?.path || entry.title === attachedTarget.workspace?.title)
+    check('attached-target access scenario resolves the launcher fixture workspace', typeof fixtureWorkspace?.id === 'string')
+    const setup = await scenarioClient.callTool({ name: 'context_setup', arguments: { workspace_id: fixtureWorkspace.id }, _meta: { 'openai/session': correlation } })
+    const contextId = setup.structuredContent?.context_id
+    check('attached-target access scenario establishes one persistent MCP execution context', typeof contextId === 'string' && contextId.length > 0)
+    await scenarioClient.callTool({ name: 'bind_conversation_intent', arguments: { context_id: contextId, message: 'External access black-box verification', task: 'Verify live access disable and restore on the external launcher MCP.' }, _meta: { 'openai/session': correlation } })
+
+    await attachedTargetControl('set-external-user-access', { access: { enabled: false } })
+    await waitForNotificationCount(() => toolListChanges, 1, 'Access disabled emits tools/list_changed on the attached MCP session')
+    const blocked = await scenarioClient.callTool({ name: 'workspace_list', arguments: {}, _meta: { 'openai/session': correlation } })
+    check('Access disabled returns user_access_disabled on the attached MCP session', blocked.isError === true && errorCode(blocked) === 'user_access_disabled', errorCode(blocked) ?? '')
+
+    await attachedTargetControl('set-external-user-access', { access: { enabled: true } })
+    await waitForNotificationCount(() => toolListChanges, 2, 'Access restored emits tools/list_changed on the attached MCP session')
+    const restored = await scenarioClient.callTool({ name: 'workspace_list', arguments: {}, _meta: { 'openai/session': correlation } })
+    check('Access restored makes calls available on the same attached MCP session', restored.isError !== true)
+    check('external access transitions preserve the original MCP transport session', typeof sessionId === 'string' && connected.transport.sessionId === sessionId)
+    check('external access restore preserves the advertised command surface', sameNames(new Set((await scenarioClient.listTools()).tools.map((tool) => tool.name)), baselineNames))
+  } finally {
+    await attachedTargetControl('set-external-user-access', { access: { enabled: true } }).catch(() => {})
+    await scenarioClient.close().catch(() => {})
+  }
 }
 
 async function runDynamicAccessStateScenario({ root, workspace }) {
@@ -370,38 +402,40 @@ async function runDynamicAccessStateScenario({ root, workspace }) {
   }
 }
 
-const scratch = mkdtempSync(join(process.env.TMPDIR || tmpdir(), 'agent-helm-mcp-blackbox-'))
-const socketRoot = createShortSocketRoot()
-const workspace = join(scratch, 'workspace')
-const configDir = join(scratch, 'config')
-const configFile = join(configDir, 'config.yml')
-const socket = join(socketRoot, 'd.sock')
-const outsideFile = join(scratch, 'outside-command-scope.txt')
-const broadAllowedDir = join(scratch, 'broad-allowed')
-const broadAllowedFile = join(broadAllowedDir, 'ordinary.txt')
-const credentialFile = join(broadAllowedDir, 'control-token')
-const token = randomBytes(24).toString('base64url')
-const port = await freePort()
-const mcpUrl = `http://127.0.0.1:${port}/mcp`
+const scratch = attachedTarget ? undefined : mkdtempSync(join(process.env.TMPDIR || tmpdir(), 'agent-helm-mcp-blackbox-'))
+const socketRoot = attachedTarget ? undefined : createShortSocketRoot()
+const workspace = attachedTarget?.workspace?.path ?? join(scratch, 'workspace')
+const configDir = attachedTarget ? undefined : join(scratch, 'config')
+const configFile = attachedTarget?.fixture?.configFile ?? join(configDir, 'config.yml')
+const socket = attachedTarget ? undefined : join(socketRoot, 'd.sock')
+const outsideFile = attachedTarget?.fixture?.outsideFile ?? join(scratch, 'outside-command-scope.txt')
+const broadAllowedDir = attachedTarget ? undefined : join(scratch, 'broad-allowed')
+const broadAllowedFile = attachedTarget ? undefined : join(broadAllowedDir, 'ordinary.txt')
+const credentialFile = attachedTarget ? undefined : join(broadAllowedDir, 'control-token')
+const token = attachedTarget?.token ?? randomBytes(24).toString('base64url')
+const port = attachedTarget ? undefined : await freePort()
+const mcpUrl = attachedTarget?.mcpUrl ?? `http://127.0.0.1:${port}/mcp`
 const correlation = `agent-helm-blackbox-${randomBytes(8).toString('hex')}`
 
-mkdirSync(workspace, { recursive: true })
-mkdirSync(configDir, { recursive: true })
-mkdirSync(broadAllowedDir, { recursive: true })
-writeFileSync(join(workspace, 'probe.txt'), 'agent-helm-mcp-blackbox\n')
-writeFileSync(outsideFile, 'outside\n')
-writeFileSync(broadAllowedFile, 'ordinary\n')
-writeFileSync(credentialFile, 'credential-sentinel\n')
-writeFileSync(configFile, `${JSON.stringify({
-  workspaces: [{ path: workspace, title: 'agent-helm-blackbox-fixture' }],
-  mcp: {
-    external: { command: true, semantic: false, read_only: false, delegate: false },
-    native: { semantic: false, delegate: false },
-  },
-  http: { tokenFile: credentialFile },
-  execution: { filesystem: { allow: [broadAllowedDir] } },
-  tunnel: { enabled: false },
-}, null, 2)}\n`)
+if (!attachedTarget) {
+  mkdirSync(workspace, { recursive: true })
+  mkdirSync(configDir, { recursive: true })
+  mkdirSync(broadAllowedDir, { recursive: true })
+  writeFileSync(join(workspace, 'probe.txt'), 'agent-helm-mcp-blackbox\n')
+  writeFileSync(outsideFile, 'outside\n')
+  writeFileSync(broadAllowedFile, 'ordinary\n')
+  writeFileSync(credentialFile, 'credential-sentinel\n')
+  writeFileSync(configFile, JSON.stringify({
+    workspaces: [{ path: workspace, title: 'agent-helm-blackbox-fixture' }],
+    mcp: {
+      external: { command: true, semantic: false, read_only: false, delegate: false },
+      native: { semantic: false, delegate: false },
+    },
+    http: { tokenFile: credentialFile },
+    execution: { filesystem: { allow: [broadAllowedDir] } },
+    tunnel: { enabled: false },
+  }, null, 2) + '\n')
+}
 
 const stdout = new LineBuffer()
 const stderr = new LineBuffer()
@@ -429,10 +463,11 @@ function spawnBaseTarget() {
 }
 
 try {
-  child = spawnBaseTarget()
+  if (baseScenarioEnabled) {
+  child = attachedTarget ? undefined : spawnBaseTarget()
 
   await waitForHealth(mcpUrl, child, stderr)
-  check('supplied command starts a reachable Agent Helm MCP server', true)
+  check(attachedTarget ? 'attached MCP target is reachable' : 'supplied command starts a reachable Agent Helm MCP server', true)
 
   const unauthorized = await fetch(mcpUrl, { method: 'GET', headers: { Authorization: 'Bearer definitely-wrong-token' } })
   check('MCP rejects an invalid bearer token', unauthorized.status === 401, `HTTP ${unauthorized.status}`)
@@ -465,7 +500,9 @@ try {
   }
 
   const workspaceList = await call('workspace_list', {})
-  const fixtureWorkspace = workspaceList.structuredContent?.workspaces?.find((entry) => entry.title === 'agent-helm-blackbox-fixture')
+  const fixtureWorkspace = attachedTarget
+    ? workspaceList.structuredContent?.workspaces?.find((entry) => entry.path === attachedTarget.workspace?.path || entry.title === attachedTarget.workspace?.title)
+    : workspaceList.structuredContent?.workspaces?.find((entry) => entry.title === 'agent-helm-blackbox-fixture')
   check('workspace_list exposes the black-box fixture workspace', typeof fixtureWorkspace?.id === 'string')
 
   const status = await call('helm_status', {})
@@ -482,6 +519,7 @@ try {
   })
   check('bind_conversation_intent binds the MCP correlation to the context', bind.structuredContent?.context_id === contextId)
 
+  if (batchEnabled('surface-command')) {
   const pwd = await call('command_execute', { context_id: contextId, command: 'pwd', purpose: 'Verify real MCP command execution cwd' })
   check('command_execute runs inside the selected MCP workspace', pwd.isError !== true && commandResult(pwd)?.return_code === 0 && commandResult(pwd)?.stdout?.trim() === '.' && commandResult(pwd)?.cwd === '.', resultDetail(pwd))
 
@@ -500,7 +538,7 @@ try {
     process.platform === 'win32' ? resultDetail(echo) : resultDetail(echo) + ' | heredoc=' + resultDetail(heredocBang),
   )
 
-  const stat = await call('command_execute', { context_id: contextId, command: 'stat probe.txt', purpose: 'Verify authorized workspace file access through MCP' })
+  const stat = await call('command_execute', { context_id: contextId, command: attachedTarget ? `stat ${JSON.stringify(attachedTarget.workspace?.authorizedProbe ?? 'package.json')}` : 'stat probe.txt', purpose: 'Verify authorized workspace file access through MCP' })
   check('command_execute can inspect an authorized workspace file', stat.isError !== true && commandResult(stat)?.return_code === 0, resultDetail(stat))
 
   const create = await call('command_execute', { context_id: contextId, command: 'touch blackbox-created.tmp', purpose: 'Verify authorized workspace write through MCP' })
@@ -510,42 +548,59 @@ try {
   check('command_execute can remove a workspace file', remove.isError !== true && commandResult(remove)?.return_code === 0, resultDetail(remove))
 
   const outside = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(outsideFile)}`, purpose: 'Verify MCP workspace read boundary' }, { validate: false })
-  const broadAllowedRead = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(broadAllowedFile)}`, purpose: 'Verify configured broad filesystem grant is active' })
-  const credentialReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
-  const credentialRead = await call('command_execute', { context_id: contextId, command: credentialReadCommand, purpose: 'Verify credential terminal read deny overrides a broader configured grant' })
-  const credentialWriteCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
-  const credentialWrite = await call('command_execute', { context_id: contextId, command: credentialWriteCommand, purpose: 'Verify credential terminal write deny overrides a broader configured grant' })
   const configReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
   const configRead = await call('command_execute', { context_id: contextId, command: configReadCommand, purpose: 'Verify Agent Helm control configuration is not command-readable by default' })
-  const originalConfig = readFileSync(configFile, 'utf8')
+  const originalConfig = attachedTarget ? undefined : readFileSync(configFile, 'utf8')
   const configWriteCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
   const configWrite = await call('command_execute', { context_id: contextId, command: configWriteCommand, purpose: 'Verify Agent Helm control configuration is not command-writable by default' })
-  check(
-    'command_execute enforces workspace and Agent Helm control-config boundaries',
-    outside.isError === true
-      && errorCode(outside) === 'shell_path_not_allowed'
-      && broadAllowedRead.isError !== true
-      && commandResult(broadAllowedRead)?.stdout?.trim() === 'ordinary'
-      && credentialRead.isError !== true
-      && commandResult(credentialRead)?.return_code === 0
-      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(credentialRead)?.stdout?.trim() ?? '')
-      && credentialWrite.isError !== true
-      && commandResult(credentialWrite)?.return_code === 0
-      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(credentialWrite)?.stdout?.trim() ?? '')
-      && readFileSync(credentialFile, 'utf8') === 'credential-sentinel\n'
-      && configRead.isError !== true
-      && commandResult(configRead)?.return_code === 0
-      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configRead)?.stdout?.trim() ?? '')
-      && configWrite.isError !== true
-      && commandResult(configWrite)?.return_code === 0
-      && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configWrite)?.stdout?.trim() ?? '')
-      && readFileSync(configFile, 'utf8') === originalConfig,
-    'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' broad=' + resultDetail(broadAllowedRead) + ' credentialRead=' + resultDetail(credentialRead) + ' credentialWrite=' + resultDetail(credentialWrite) + ' configRead=' + resultDetail(configRead) + ' configWrite=' + resultDetail(configWrite),
-  )
-
+  if (attachedTarget) {
+    check(
+      'command_execute enforces workspace and Agent Helm control-config boundaries',
+      outside.isError === true
+        && ['shell_path_not_allowed', 'filesystem_read_denied'].includes(errorCode(outside))
+        && configRead.isError !== true
+        && commandResult(configRead)?.return_code === 0
+        && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configRead)?.stdout?.trim() ?? '')
+        && configWrite.isError !== true
+        && commandResult(configWrite)?.return_code === 0
+        && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configWrite)?.stdout?.trim() ?? '')
+        ,
+      'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' configRead=' + resultDetail(configRead) + ' configWrite=' + resultDetail(configWrite),
+    )
+  } else {
+    const broadAllowedRead = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(broadAllowedFile)}`, purpose: 'Verify configured broad filesystem grant is active' })
+    const credentialReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+    const credentialRead = await call('command_execute', { context_id: contextId, command: credentialReadCommand, purpose: 'Verify credential terminal read deny overrides a broader configured grant' })
+    const credentialWriteCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+    const credentialWrite = await call('command_execute', { context_id: contextId, command: credentialWriteCommand, purpose: 'Verify credential terminal write deny overrides a broader configured grant' })
+    check(
+      'command_execute enforces workspace and Agent Helm control-config boundaries',
+      outside.isError === true
+        && ['shell_path_not_allowed', 'filesystem_read_denied'].includes(errorCode(outside))
+        && broadAllowedRead.isError !== true
+        && commandResult(broadAllowedRead)?.stdout?.trim() === 'ordinary'
+        && credentialRead.isError !== true
+        && commandResult(credentialRead)?.return_code === 0
+        && /^denied:(?:EPERM|EACCES)$/.test(commandResult(credentialRead)?.stdout?.trim() ?? '')
+        && credentialWrite.isError !== true
+        && commandResult(credentialWrite)?.return_code === 0
+        && /^denied:(?:EPERM|EACCES)$/.test(commandResult(credentialWrite)?.stdout?.trim() ?? '')
+        && readFileSync(credentialFile, 'utf8') === 'credential-sentinel\n'
+        && configRead.isError !== true
+        && commandResult(configRead)?.return_code === 0
+        && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configRead)?.stdout?.trim() ?? '')
+        && configWrite.isError !== true
+        && commandResult(configWrite)?.return_code === 0
+        && /^denied:(?:EPERM|EACCES)$/.test(commandResult(configWrite)?.stdout?.trim() ?? '')
+        && readFileSync(configFile, 'utf8') === originalConfig,
+      'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' broad=' + resultDetail(broadAllowedRead) + ' credentialRead=' + resultDetail(credentialRead) + ' credentialWrite=' + resultDetail(credentialWrite) + ' configRead=' + resultDetail(configRead) + ' configWrite=' + resultDetail(configWrite),
+    )
+  }
   const destructive = await call('command_execute', { context_id: contextId, command: 'git reset --hard HEAD~1', purpose: 'Verify MCP destructive command guardrail' }, { validate: false })
   check('command_execute exposes the destructive-command guardrail through MCP', destructive.isError === true && errorCode(destructive) === 'destructive_command_denied', errorCode(destructive) ?? '')
+  }
 
+  if (batchEnabled('context-transport')) {
   const repeatedSetup = await client.callTool({
     name: 'context_setup',
     arguments: { workspace_id: fixtureWorkspace.id },
@@ -601,7 +656,9 @@ try {
   check('unknown MCP transport session id is rejected with HTTP 404', unknownSessionResponse.status === 404, `HTTP ${unknownSessionResponse.status}`)
   const getWithoutSession = await rawMcpRequest(mcpUrl, token, { method: 'GET' })
   check('GET without an MCP transport session is rejected', getWithoutSession.status === 400, `HTTP ${getWithoutSession.status}`)
+  }
 
+  if (batchEnabled('restart-concurrency')) {
   const concurrentResults = await Promise.all(Array.from({ length: 8 }, (_, index) => client.callTool({
     name: 'command_execute',
     arguments: { context_id: contextId, command: `echo AGENT_HELM_MCP_BLACKBOX_PARALLEL_${index}`, purpose: `Verify concurrent MCP command execution ${index}` },
@@ -612,12 +669,17 @@ try {
   check('MCP server remains usable after concurrent command execution', afterConcurrency.isError !== true && Array.isArray(afterConcurrency.structuredContent?.workspaces))
 
   const preRestartSessionId = transport.sessionId
-  terminateProcessTree(child)
-  const restartStop = await waitForExit(child)
-  child = spawnBaseTarget()
-  await waitForHealth(mcpUrl, child, stderr)
+  let restartStop = { forced: false }
+  if (attachedTarget) {
+    await requestAttachedTargetRestart()
+  } else {
+    terminateProcessTree(child)
+    restartStop = await waitForExit(child)
+    child = spawnBaseTarget()
+    await waitForHealth(mcpUrl, child, stderr)
+  }
   const recoveredTools = await client.listTools()
-  check('pre-restart MCP client recovers after graceful SIGTERM without reinitializing', restartStop.forced === false && sameNames(new Set(recoveredTools.tools.map((tool) => tool.name)), expectedTools))
+  check('pre-restart MCP client recovers after graceful restart without reinitializing', restartStop.forced === false && sameNames(new Set(recoveredTools.tools.map((tool) => tool.name)), expectedTools))
   check('stateless restart recovery preserves the original MCP transport session id', typeof preRestartSessionId === 'string' && transport.sessionId === preRestartSessionId)
   const recoveredCommand = await client.callTool({
     name: 'command_execute',
@@ -632,18 +694,26 @@ try {
   } finally {
     await freshAfterRestart.client.close().catch(() => {})
   }
-
-  if (stateHomeRoot) {
-    mkdirSync(stateHomeRoot, { recursive: true })
-    await runDynamicAccessStateScenario({ root: stateHomeRoot, workspace })
+  }
   }
 
-  console.log(`Agent Helm MCP black-box OK (${checkCount} checks)`)
+  if (batchEnabled('access-transitions')) {
+    if (attachedTarget) {
+      await runAttachedAccessStateScenario()
+    } else if (stateHomeRoot) {
+      mkdirSync(stateHomeRoot, { recursive: true })
+      await runDynamicAccessStateScenario({ root: stateHomeRoot, workspace })
+    }
+  }
+
+  console.log(`Agent Helm MCP black-box${requestedBatch ? ` batch ${requestedBatch}` : ''} OK (${checkCount} checks)`)
 } finally {
   await client?.close().catch(() => {})
-  terminateProcessTree(child)
-  const finalStop = await waitForExit(child)
-  rmSync(socketRoot, { recursive: true, force: true })
-  rmSync(scratch, { recursive: true, force: true })
-  if (finalStop.forced) throw new Error('Agent Helm black-box target required SIGKILL during cleanup')
+  if (!attachedTarget) {
+    terminateProcessTree(child)
+    const finalStop = await waitForExit(child)
+    rmSync(socketRoot, { recursive: true, force: true })
+    rmSync(scratch, { recursive: true, force: true })
+    if (finalStop.forced) throw new Error('Agent Helm black-box target required SIGKILL during cleanup')
+  }
 }

@@ -34,7 +34,7 @@ test('drives the supplied Agent Helm command only through its public MCP interfa
     assert.match(result.stdout, /context_required/)
     assert.match(result.stdout, /unknown MCP transport session id is rejected with HTTP 404/)
     assert.match(result.stdout, /concurrent MCP command calls all complete/)
-    assert.match(result.stdout, /pre-restart MCP client recovers after graceful SIGTERM without reinitializing/)
+    assert.match(result.stdout, /pre-restart MCP client recovers after graceful restart without reinitializing/)
     assert.match(result.stdout, /pre-restart execution context and conversation remain usable after Agent Helm restart/)
     assert.match(result.stdout, /Access disabled returns user_access_disabled on the existing MCP session/)
     assert.match(result.stdout, /Mutations disabled gives stale cached mutation calls tool_not_available_on_surface/)
@@ -76,5 +76,5 @@ test('keeps daemon sockets independent from a deeply nested caller TMPDIR', { sk
 test('requires a caller-supplied launch command', () => {
   const result = spawnSync(process.execPath, [harness], { encoding: 'utf8' })
   assert.equal(result.status, 2)
-  assert.match(result.stderr, /Usage: agent-helm-blackbox -- <agent-helm command/)
+  assert.match(result.stderr, /Usage: agent-helm-blackbox .*-- <agent-helm command/)
 })

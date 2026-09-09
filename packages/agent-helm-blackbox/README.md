@@ -2,7 +2,7 @@
 
 `@beforewave/agent-helm-blackbox` verifies an Agent Helm build from the outside, as a real MCP client.
 
-The caller supplies the command that launches Agent Helm. The harness does not import Agent Helm implementation modules, inspect the tested package source tree, choose an npm version, or replace the MCP server with an in-process test server.
+The caller normally supplies the command that launches Agent Helm. The runner does not import Agent Helm implementation modules, inspect the tested package source tree, choose an npm version, or replace the MCP server with an in-process test server.
 
 ## Usage
 
@@ -25,6 +25,24 @@ agent-helm-blackbox -- npx --yes --package @beforewave/agent-helm@0.1.3 agent-he
 ```
 
 Everything after `--` is treated as the command prefix for the Agent Helm build under test. The harness appends the daemon arguments required to start that build on temporary MCP transport endpoints.
+
+### Attached MCP target
+
+When the verifier itself cannot host another Agent Helm process, it can attach to an already-running MCP test target:
+
+```sh
+agent-helm-blackbox --attached-target /path/to/target.json
+```
+
+The attached-target file is a black-box test-framework contract, not Agent Helm product state. It contains the MCP URL/token plus optional workspace, lifecycle/control, and probe metadata required by the selected black-box cases. The runner does not read Core E2E launcher or fixture state directly.
+
+Black-box feature batches remain independently runnable:
+
+```sh
+agent-helm-blackbox --batch surface-command --attached-target /path/to/target.json
+```
+
+Available batches are `surface-command`, `context-transport`, `restart-concurrency`, and `access-transitions`. Batch selection changes execution granularity only; it does not change the public black-box contract.
 
 ## Environment and isolation
 

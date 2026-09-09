@@ -10,6 +10,7 @@
   },
   "files": [
     "bin",
+    "support",
     "README.md",
     "LICENSE"
   ],
