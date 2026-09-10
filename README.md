@@ -8,6 +8,10 @@
 
 **Say goodbye to copy-pasting and Token quota anxiety. Let ChatGPT on the web connect directly to your local projects, run code, and call local Coding Agents when needed.**
 
+
+[![npm](https://img.shields.io/npm/v/@beforewave/agent-helm?color=blue\&style=flat-square)](https://www.npmjs.com/package/@beforewave/agent-helm)
+[![License](https://img.shields.io/github/license/BeforeWave/agent-helm?style=flat-square)](./LICENSE)
+
 </div>
 <p align="center">
   <sub>
