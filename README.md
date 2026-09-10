@@ -20,7 +20,7 @@
 <br />
 
 <p align="center">
-  <img width="1000" alt="Agent Helm" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+   <img width="1000" alt="Agent Helm Overview" src="https://github.com/user-attachments/assets/758fc57f-e84c-4483-9345-9b4ae9470ddf" />
 </p>
 
 ---
@@ -242,7 +242,7 @@ agent-helm setup chrome
 From the browser, you can directly view the current project, Worktree, ChatGPT's local actions, Coding Agents, Agent Sessions, and Work History.
 
 <p align="center">
-  <img width="1000" alt="Agent Helm Chrome Extension" src="https://github.com/user-attachments/assets/0c65c877-91d2-4453-a986-52d1bd13af5a" />
+<img width="900" alt="Agent Helm Work Detail pannel" src="https://github.com/user-attachments/assets/fb409a2c-d4c1-4968-b571-cbcfad9b2809" />
 </p>
 
 ### DSH with ChatGPT
@@ -252,7 +252,7 @@ From the browser, you can directly view the current project, Worktree, ChatGPT's
 It lets ChatGPT work directly with local projects and create native DSH Sessions when sustained execution is needed.
 
 <p align="center">
-  <img width="1000" alt="DSH with ChatGPT" src="https://github.com/user-attachments/assets/48103763-2897-4df3-94a9-af36df672448" />
+ <img width="900" alt="DSH with ChatGPT" src="https://github.com/user-attachments/assets/0446ad68-559a-43e0-b663-9f2a00699522" />
 </p>
 
 ---
