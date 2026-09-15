@@ -44,6 +44,16 @@ test('installer source is derived from the public Extension release', () => {
   assert.equal(source.windows.downloadUrl, 'https://github.com/BeforeWave/agent-helm-extensions/releases/download/v1.2.3/Agent-Helm-Installer-1.2.3-win32-x64.cmd')
 })
 
+test('installer source separates dev release selector from stable artifact version', () => {
+  const source = agentHelmInstallerSourceForRelease('1.2.3-dev')
+  assert.equal(source.macos.releaseVersion, '1.2.3-dev')
+  assert.equal(source.macos.version, '1.2.3')
+  assert.equal(source.macos.assetName, 'Agent-Helm-Installer-1.2.3.pkg')
+  assert.equal(source.macos.downloadUrl, 'https://github.com/BeforeWave/agent-helm-extensions/releases/download/v1.2.3-dev/Agent-Helm-Installer-1.2.3.pkg')
+  assert.equal(source.windows.version, '1.2.3')
+  assert.equal(source.windows.downloadUrl, 'https://github.com/BeforeWave/agent-helm-extensions/releases/download/v1.2.3-dev/Agent-Helm-Installer-1.2.3-win32-x64.cmd')
+})
+
 test('Work History session normalization owns legacy compatibility at the UI boundary', () => {
   const normalized = normalizeWorkHistorySession({
     session_id: 'session-legacy',
