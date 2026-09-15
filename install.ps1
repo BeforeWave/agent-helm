@@ -112,7 +112,7 @@ if ($RuntimeBundle) {
   if ($RuntimeBundleSha256 -notmatch '^[0-9a-fA-F]{64}$') { Fail 'bundled Agent Helm runtime SHA-256 is invalid' }
   $actual = (Get-FileHash -LiteralPath $RuntimeBundle -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($actual -ne $RuntimeBundleSha256.ToLowerInvariant()) { Fail 'bundled Agent Helm runtime SHA-256 verification failed' }
-  Stage 2 "Agent Helm $Version: embedded runtime"
+  Stage 2 "Agent Helm ${Version}: embedded runtime"
   $installRoot = "$Prefix.install.$([guid]::NewGuid().ToString('N'))"
   New-Item -ItemType Directory -Path $installRoot -Force | Out-Null
   try {
@@ -130,7 +130,7 @@ if ($RuntimeBundle) {
   }
 } else {
   $Version = (& $ReleaseTool resolve -ReleaseUrl $ReleaseUrl -Version $Version | Select-Object -Last 1).Trim()
-  Stage 2 "Agent Helm $Version: exact-version install"
+  Stage 2 "Agent Helm ${Version}: exact-version install"
   & $NpmCmd view "$Package@$Version" version --silent *> $null
   $npmHasVersion = $LASTEXITCODE -eq 0
   if ($npmHasVersion) {

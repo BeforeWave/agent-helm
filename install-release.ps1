@@ -104,11 +104,15 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
   Fail 'output is required'
 }
 
-$matches = @($manifest.artifacts | Where-Object { $_.id -eq $ArtifactId -and $_.version -eq $Version })
+$matches = @($manifest.artifacts | Where-Object { $_.id -eq $ArtifactId })
 if ($matches.Count -ne 1) {
-  Fail "release manifest must contain exactly one $ArtifactId artifact for $Version"
+  Fail "release manifest must contain exactly one $ArtifactId artifact"
 }
 $artifact = $matches[0]
+$ProductVersion = $Version -replace "-dev$", ""
+if ($artifact.version -ne $ProductVersion) {
+  Fail "release artifact version $($artifact.version) does not match release target $ProductVersion"
+}
 if ($artifact.downloadUrl -isnot [string] -or $artifact.sha256 -isnot [string]) {
   Fail 'release artifact is missing downloadUrl or sha256'
 }

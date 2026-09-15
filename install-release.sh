@@ -119,8 +119,11 @@ case "$command_name" in
     trap 'rm -rf "$root"' EXIT HUP INT TERM
     manifest="$root/release-manifest.json"
     fetch_manifest "$release_url" "$resolved" "$manifest"
+    release_version=$(manifest_field "$manifest" releaseVersion)
+    [ "$release_version" = "$resolved" ] || fail "release manifest version $release_version does not match Release v$resolved."
     artifact_version=$(artifact_field "$manifest" "$artifact_id" version)
-    [ "$artifact_version" = "$resolved" ] || fail "artifact $artifact_id version does not match Release v$resolved."
+    artifact_target_version=${resolved%-dev}
+    [ "$artifact_version" = "$artifact_target_version" ] || fail "artifact $artifact_id version $artifact_version does not match release target $artifact_target_version."
     download_url=$(artifact_field "$manifest" "$artifact_id" downloadUrl)
     expected_sha=$(artifact_field "$manifest" "$artifact_id" sha256 | tr 'A-F' 'a-f')
     [ -n "$download_url" ] || fail "release manifest does not contain artifact $artifact_id downloadUrl."
