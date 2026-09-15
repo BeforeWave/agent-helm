@@ -1,10 +1,14 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
-export function enableLoopbackProxyBypass() {
+export const MCP_TEST_SANDBOX_PROXY_ENV = 'AGENT_HELM_E2E_SANDBOX_PROXY'
+
+export function enableLoopbackProxyBypass(env = process.env) {
+  if (env[MCP_TEST_SANDBOX_PROXY_ENV] === '1') return false
   const add = (value) => [...new Set([...(value ?? '').split(',').map((item) => item.trim()).filter(Boolean), '127.0.0.1', 'localhost'])].join(',')
-  process.env.NO_PROXY = add(process.env.NO_PROXY)
-  process.env.no_proxy = add(process.env.no_proxy)
+  env.NO_PROXY = add(env.NO_PROXY)
+  env.no_proxy = add(env.no_proxy)
+  return true
 }
 
 export async function connectMcpClient(options, tokenArg, nameArg) {

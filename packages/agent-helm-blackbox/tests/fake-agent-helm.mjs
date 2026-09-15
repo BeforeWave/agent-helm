@@ -107,18 +107,18 @@ let accessSignature = JSON.stringify(access)
 const tool = (name, outputSchema = { type: 'object' }) => ({ name, inputSchema: { type: 'object' }, outputSchema })
 const baseTools = [
   tool('context_setup', { type: 'object', properties: { context_id: { type: 'string' } }, required: ['context_id'], additionalProperties: false }),
-  tool('bind_conversation_intent', { type: 'object', properties: { context_id: { type: 'string' } }, required: ['context_id'], additionalProperties: false }),
   tool('workspace_list', { type: 'object', properties: { workspaces: { type: 'array', items: { type: 'object' } } }, required: ['workspaces'], additionalProperties: false }),
   tool('helm_status', { type: 'object', properties: { status: { type: 'string' }, capabilities: { type: 'object' } }, required: ['status', 'capabilities'], additionalProperties: false }),
 ]
-const commandTool = tool('command_execute', { type: 'object', properties: { result: { type: 'object' } }, required: ['result'], additionalProperties: false })
+const commandTool = tool('command_execute', { type: 'object', properties: { result: { type: 'object' }, process: { type: 'object' } }, anyOf: [{ required: ['result'] }, { required: ['process'] }], additionalProperties: false })
+const commandProcessTools = ['command_process_poll', 'command_process_stdin', 'command_process_signal', 'command_process_result'].map((name) => tool(name))
 const semanticQueryTools = [tool('semantic_find_symbol')]
 const semanticMutationTools = [tool('semantic_rename_symbol')]
 const delegationTools = [tool('agents_list'), tool('agent_sessions_create')]
 
 function currentTools() {
   const tools = [...baseTools]
-  if (configured.command) tools.push(commandTool)
+  if (configured.command) tools.push(commandTool, ...commandProcessTools)
   if (configured.semantic) {
     tools.push(...semanticQueryTools)
     if (!configured.read_only && access.mutations) tools.push(...semanticMutationTools)
@@ -152,12 +152,8 @@ function protocol() {
     if (name === 'workspace_list') return structured({ workspaces: [{ id: workspaceId, title: 'agent-helm-blackbox-fixture', git: { available: true, isRepository: false } }] })
     if (name === 'helm_status') return structured({ status: 'ok', capabilities: { command: Boolean(configured.command), semantic: Boolean(configured.semantic), delegation: Boolean(configured.delegate && access.delegation) } })
     if (name === 'context_setup') {
-      if (!input.workspace_id || !correlation) return toolError('invalid_input')
+      if (!input.workspace_id || !input.message || !input.task || !correlation) return toolError('invalid_input')
       return structured({ context_id: contextForCorrelation(correlation) })
-    }
-    if (name === 'bind_conversation_intent') {
-      const denied = contextAccessError(input.context_id, correlation)
-      return denied ? toolError(denied) : structured({ context_id: String(input.context_id) })
     }
     if (name === 'semantic_find_symbol' || name === 'semantic_rename_symbol' || name === 'agent_sessions_create' || name === 'command_execute') {
       const denied = contextAccessError(input.context_id, correlation)

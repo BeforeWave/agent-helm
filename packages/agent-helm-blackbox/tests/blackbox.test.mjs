@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-const harness = fileURLToPath(new URL('../bin/agent-helm-blackbox.mjs', import.meta.url))
+const harness = fileURLToPath(new URL('../bin/agent-helm-blackbox-cli.mjs', import.meta.url))
 const fakeAgentHelm = fileURLToPath(new URL('./fake-agent-helm.mjs', import.meta.url))
 
 test('drives the supplied Agent Helm command only through its public MCP interface', () => {

@@ -227,10 +227,9 @@ async function runAttachedAccessStateScenario() {
     const workspaceList = await scenarioClient.callTool({ name: 'workspace_list', arguments: {}, _meta: { 'openai/session': correlation } })
     const fixtureWorkspace = workspaceList.structuredContent?.workspaces?.find((entry) => entry.path === attachedTarget.workspace?.path || entry.title === attachedTarget.workspace?.title)
     check('attached-target access scenario resolves the launcher fixture workspace', typeof fixtureWorkspace?.id === 'string')
-    const setup = await scenarioClient.callTool({ name: 'context_setup', arguments: { workspace_id: fixtureWorkspace.id }, _meta: { 'openai/session': correlation } })
+    const setup = await scenarioClient.callTool({ name: 'context_setup', arguments: { workspace_id: fixtureWorkspace.id, message: 'External access black-box verification', task: 'Verify live access disable and restore on the external launcher MCP.' }, _meta: { 'openai/session': correlation } })
     const contextId = setup.structuredContent?.context_id
     check('attached-target access scenario establishes one persistent MCP execution context', typeof contextId === 'string' && contextId.length > 0)
-    await scenarioClient.callTool({ name: 'bind_conversation_intent', arguments: { context_id: contextId, message: 'External access black-box verification', task: 'Verify live access disable and restore on the external launcher MCP.' }, _meta: { 'openai/session': correlation } })
 
     await attachedTargetControl('set-external-user-access', { access: { enabled: false } })
     await waitForNotificationCount(() => toolListChanges, 1, 'Access disabled emits tools/list_changed on the attached MCP session')
@@ -319,16 +318,9 @@ async function runDynamicAccessStateScenario({ root, workspace }) {
     const workspaceList = await scenarioClient.callTool({ name: 'workspace_list', arguments: {}, _meta: { 'openai/session': scenarioCorrelation } })
     const fixtureWorkspace = workspaceList.structuredContent?.workspaces?.find((entry) => entry.title === 'agent-helm-blackbox-fixture')
     check('live access scenario resolves the fixture workspace', typeof fixtureWorkspace?.id === 'string')
-    const setup = await scenarioClient.callTool({ name: 'context_setup', arguments: { workspace_id: fixtureWorkspace.id }, _meta: { 'openai/session': scenarioCorrelation } })
+    const setup = await scenarioClient.callTool({ name: 'context_setup', arguments: { workspace_id: fixtureWorkspace.id, message: 'Agent Helm dynamic access black-box verification', task: 'Verify live access transitions over one MCP session.' }, _meta: { 'openai/session': scenarioCorrelation } })
     const contextId = setup.structuredContent?.context_id
     check('live access scenario establishes one persistent MCP execution context', typeof contextId === 'string' && contextId.length > 0)
-    const bind = await scenarioClient.callTool({
-      name: 'bind_conversation_intent',
-      arguments: { context_id: contextId, message: 'Agent Helm dynamic access black-box verification', task: 'Verify live access transitions over one MCP session.' },
-      _meta: { 'openai/session': scenarioCorrelation },
-    })
-    check('live access scenario binds its persistent MCP context', bind.isError !== true && bind.structuredContent?.context_id === contextId)
-
     await nativeControlRequest({ home: scenarioHome, socket: scenarioSocket, method: 'setExternalUserAccess', params: [{ enabled: false }] })
     await waitForNotificationCount(() => toolListChanges, 1, 'Access disabled emits tools/list_changed on the existing MCP session')
     check('Access disabled emits tools/list_changed on the existing MCP session', toolListChanges >= 1, `count=${toolListChanges}`)
@@ -479,7 +471,7 @@ try {
 
   const listed = await client.listTools()
   const tools = new Map(listed.tools.map((tool) => [tool.name, tool]))
-  const expectedTools = new Set(['context_setup', 'bind_conversation_intent', 'workspace_list', 'helm_status', 'command_execute', 'command_process_poll', 'command_process_stdin', 'command_process_signal', 'command_process_result'])
+  const expectedTools = new Set(['context_setup', 'workspace_list', 'helm_status', 'command_execute', 'command_process_poll', 'command_process_stdin', 'command_process_signal', 'command_process_result'])
   check('command-only profile advertises the exact expected MCP tool set', sameNames(tools.keys(), expectedTools), [...tools.keys()].join(', '))
   check('every advertised MCP tool publishes input and output schemas', [...tools.values()].every((tool) => tool.inputSchema?.type === 'object' && tool.outputSchema?.type === 'object'))
 
@@ -532,16 +524,9 @@ try {
   const status = await call('helm_status', {})
   check('helm_status reports the requested command-only capability profile', status.structuredContent?.status === 'ok' && status.structuredContent?.capabilities?.command === true && status.structuredContent?.capabilities?.semantic === false && status.structuredContent?.capabilities?.delegation === false)
 
-  const setup = await call('context_setup', { workspace_id: fixtureWorkspace.id })
+  const setup = await call('context_setup', { workspace_id: fixtureWorkspace.id, message: 'Agent Helm npm MCP black-box verification', task: 'Exercise the installed Agent Helm package only through its public MCP interface.' })
   const contextId = setup.structuredContent?.context_id
   check('context_setup returns an execution context id', typeof contextId === 'string' && contextId.length > 0)
-
-  const bind = await call('bind_conversation_intent', {
-    context_id: contextId,
-    message: 'Agent Helm npm MCP black-box verification',
-    task: 'Exercise the installed Agent Helm package only through its public MCP interface.',
-  })
-  check('bind_conversation_intent binds the MCP correlation to the context', bind.structuredContent?.context_id === contextId)
 
   if (batchEnabled('surface-command')) {
   const pwd = await call('command_execute', { context_id: contextId, command: 'pwd', purpose: 'Verify real MCP command execution cwd' })
@@ -631,7 +616,7 @@ try {
   if (batchEnabled('context-transport')) {
   const repeatedSetup = await client.callTool({
     name: 'context_setup',
-    arguments: { workspace_id: fixtureWorkspace.id },
+    arguments: { workspace_id: fixtureWorkspace.id, message: 'Agent Helm npm MCP black-box verification', task: 'Exercise the installed Agent Helm package only through its public MCP interface.' },
     _meta: { 'openai/session': correlation },
   })
   check('context_setup reuses the same execution context for the same conversation and target', repeatedSetup.isError !== true && repeatedSetup.structuredContent?.context_id === contextId)
@@ -639,7 +624,7 @@ try {
   const secondCorrelation = `agent-helm-blackbox-isolation-${randomBytes(8).toString('hex')}`
   const secondSetup = await client.callTool({
     name: 'context_setup',
-    arguments: { workspace_id: fixtureWorkspace.id },
+    arguments: { workspace_id: fixtureWorkspace.id, message: 'Independent black-box conversation', task: 'Verify same-target conversation isolation.' },
     _meta: { 'openai/session': secondCorrelation },
   })
   const secondContextId = secondSetup.structuredContent?.context_id

@@ -6,10 +6,10 @@
   "private": true,
   "type": "module",
   "bin": {
-    "agent-helm-blackbox": "bin/agent-helm-blackbox.mjs"
+    "agent-helm-blackbox": "bin/agent-helm-blackbox-cli.mjs"
   },
   "files": [
-    "bin",
+    "bin/agent-helm-blackbox-cli.mjs",
     "support",
     "README.md",
     "LICENSE"

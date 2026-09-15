@@ -34,7 +34,7 @@ When the verifier itself cannot host another Agent Helm process, it can attach t
 agent-helm-blackbox --attached-target /path/to/target.json
 ```
 
-The attached-target file is a black-box test-framework contract, not Agent Helm product state. It contains the MCP URL/token plus optional workspace, lifecycle/control, and probe metadata required by the selected black-box cases. The runner does not read Core E2E launcher or fixture state directly.
+The attached-target file is a black-box test-framework contract, not Agent Helm product state. It contains the MCP URL/token plus optional workspace, lifecycle/control, and probe metadata required by the selected black-box cases. The runner does not read Core E2E Test Bridge or fixture state directly.
 
 Black-box feature batches remain independently runnable:
 
@@ -92,19 +92,18 @@ The harness verifies the real HTTP MCP endpoint exposed by the supplied Agent He
 5. every advertised tool includes input and output schemas;
 6. `workspace_list` exposes the temporary authorized workspace;
 7. `helm_status` reports the requested command-only capability profile;
-8. `context_setup` returns an execution context;
-9. `bind_conversation_intent` binds the MCP correlation to that context;
-10. `command_execute` runs `pwd`, an ordinary command, and authorized file inspection through MCP;
-11. workspace file create/remove operations work through MCP;
-12. a direct read outside the workspace is rejected with `shell_path_not_allowed`;
-13. a destructive Git reset is rejected with `destructive_command_denied`;
-14. successful tool results match each tool's advertised output schema;
-15. repeated context setup for the same conversation/target is stable while another conversation receives a distinct context;
-16. cross-conversation context use is rejected with `context_ownership_mismatch`;
-17. missing/unknown contexts, invalid tool input, unknown tools, missing transport sessions, and unknown transport session ids fail with the public contract;
-18. multiple concurrent real `command_execute` calls complete independently and leave the MCP server usable;
-19. the supplied Agent Helm service can restart on the same endpoint while the existing MCP client recovers without reinitializing;
-20. restart recovery preserves the MCP transport session id and the pre-restart Helm execution context/conversation remains usable for real command execution.
+8. `context_setup` requires `message`/`task`, returns an execution context, and binds that conversation provenance in the same call;
+9. `command_execute` runs `pwd`, an ordinary command, and authorized file inspection through MCP;
+10. workspace file create/remove operations work through MCP;
+11. a direct read outside the workspace is rejected with `shell_path_not_allowed`;
+12. a destructive Git reset is rejected with `destructive_command_denied`;
+13. successful tool results match each tool's advertised output schema;
+14. repeated context setup for the same conversation/target is stable while another conversation receives a distinct context;
+15. cross-conversation context use is rejected with `context_ownership_mismatch`;
+16. missing/unknown contexts, invalid tool input, unknown tools, missing transport sessions, and unknown transport session ids fail with the public contract;
+17. multiple concurrent real `command_execute` calls complete independently and leave the MCP server usable;
+18. the supplied Agent Helm service can restart on the same endpoint while the existing MCP client recovers without reinitializing;
+19. restart recovery preserves the MCP transport session id and the pre-restart Helm execution context/conversation remains usable for real command execution.
 
 With `AGENT_HELM_BLACKBOX_STATE_HOME`, the same runner additionally verifies live `on -> off -> on` access transitions while preserving one execution context and one MCP transport session:
 
