@@ -5,7 +5,7 @@
     "releaseUrl": "https://github.com/openai/tunnel-client/releases"
   },
   "agentHelm": {
-    "version": "0.1.5-dev",
+    "version": "0.1.5",
     "releaseUrl": "https://github.com/BeforeWave/agent-helm/releases"
   }
 }
