@@ -34,6 +34,7 @@ resolve_version() {
   if [ "$requested" != latest ]; then
     requested=${requested#v}
     validate_version "$requested"
+    requested=${requested%-dev}
     printf '%s\n' "$requested"
     return 0
   fi

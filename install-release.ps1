@@ -53,7 +53,7 @@ function Resolve-Version([string]$BaseUrl, [string]$RequestedVersion) {
   if ($RequestedVersion -ne 'latest') {
     $exact = $RequestedVersion -replace '^v', ''
     Assert-SemVer $exact
-    return $exact
+    return ($exact -replace '-dev$', '')
   }
   $response = Invoke-GitHubRequest "$BaseUrl/latest"
   $effective = (Get-EffectiveUri $response).TrimEnd('/')
