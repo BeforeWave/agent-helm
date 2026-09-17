@@ -76,7 +76,7 @@ $ReleaseUrl = Normalize-ReleaseUrl $ReleaseUrl
 $Version = Resolve-Version $ReleaseUrl $Version
 
 if ($Command -eq 'resolve') {
-  [Console]::Out.WriteLine($Version)
+  Write-Output $Version
   return
 }
 
@@ -93,7 +93,7 @@ if ($Command -eq 'field') {
   if ($null -eq $property -or $property.Value -isnot [string] -or [string]::IsNullOrWhiteSpace($property.Value)) {
     Fail "release manifest does not contain string field $Field"
   }
-  [Console]::Out.WriteLine([string]$property.Value)
+  Write-Output ([string]$property.Value)
   return
 }
 
@@ -136,4 +136,4 @@ if ($actual -ne $expected) {
   Remove-Item -LiteralPath $outputPath -Force -ErrorAction SilentlyContinue
   Fail "release artifact SHA-256 verification failed for $ArtifactId"
 }
-[Console]::Out.WriteLine($Version)
+Write-Output $Version
