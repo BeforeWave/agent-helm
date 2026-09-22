@@ -37,7 +37,7 @@ function Get-RemoteScript([string]$Uri) {
 $ReleaseTool = Get-RemoteScript $ReleaseToolUrl
 
 function Get-NodeMajor([string]$NodePath) {
-  try { return [int](& $NodePath -p 'Number(process.versions.node.split(".")[0])') } catch { return 0 }
+  try { return [int](& $NodePath -p 'Number(process.versions.node.split(String.fromCharCode(46))[0])') } catch { return 0 }
 }
 
 function Test-Node([string]$NodePath) {
