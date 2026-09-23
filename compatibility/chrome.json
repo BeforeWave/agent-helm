@@ -14,7 +14,7 @@
     "id": "eigfmmjccbiinngdfifjkpmofandcgif"
   },
   "nodeRuntime": {
-    "version": "v22.23.2",
+    "version": "v24",
     "releaseUrl": "https://nodejs.org/dist"
   }
 }
