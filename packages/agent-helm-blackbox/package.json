@@ -21,7 +21,7 @@
     "@modelcontextprotocol/sdk": "1.30.0"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "agentHelm": {
     "ownership": "private"
