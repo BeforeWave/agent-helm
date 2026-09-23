@@ -12,8 +12,8 @@ $Package = '@beforewave/agent-helm'
 $ReleaseUrl = 'https://github.com/BeforeWave/agent-helm/releases'
 $ReleaseToolUrl = if ($env:BEFOREWAVE_RELEASE_TOOL_URL) { $env:BEFOREWAVE_RELEASE_TOOL_URL } else { 'https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install-release.ps1' }
 $Prefix = if ($env:AGENT_HELM_INSTALL_PREFIX) { $env:AGENT_HELM_INSTALL_PREFIX } else { Join-Path $HOME '.agent-helm\npm' }
-$NodeVersion = '22.23.2'
-$MinNodeMajor = 22
+$NodeVersion = if ($env:AGENT_HELM_NODE_VERSION) { $env:AGENT_HELM_NODE_VERSION } else { '' }
+$MinNodeMajor = 24
 $AgentHome = Join-Path $HOME '.agent-helm'
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { Fail 'this installer supports Windows only' }
 $BinRoot = Join-Path $AgentHome 'bin'
@@ -52,16 +52,25 @@ function Find-SystemNode {
 }
 
 function Install-ManagedNode {
-  Stage 1 "Runtime / Node: installing managed Node.js $NodeVersion win-x64"
-  $asset = "node-v$NodeVersion-win-x64.zip"
-  $base = "https://nodejs.org/dist/v$NodeVersion"
+  Stage 1 "Runtime / Node: installing managed Node.js 24 win-x64"
+  $base = 'https://nodejs.org/dist/latest-v24.x'
+  if ($NodeVersion) {
+    if ($NodeVersion -notmatch '^24\.[0-9]+\.[0-9]+$') { Fail 'AGENT_HELM_NODE_VERSION must be an exact Node.js 24 version' }
+    $base = "https://nodejs.org/dist/v$NodeVersion"
+  }
   $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("agent-helm-node-" + [guid]::NewGuid().ToString('N'))
   New-Item -ItemType Directory -Path $temp -Force | Out-Null
   try {
-    $archive = Join-Path $temp $asset
     $sums = Join-Path $temp 'SHASUMS256.txt'
-    Invoke-WebRequest -UseBasicParsing -Uri "$base/$asset" -OutFile $archive
     Invoke-WebRequest -UseBasicParsing -Uri "$base/SHASUMS256.txt" -OutFile $sums
+    if (-not $NodeVersion) {
+      $entry = Get-Content -LiteralPath $sums | Where-Object { $_ -match '^[0-9a-fA-F]{64}\s+\*?node-v24\.[0-9]+\.[0-9]+-win-x64\.zip$' } | Select-Object -First 1
+      if (-not $entry -or $entry -notmatch 'node-v(24\.[0-9]+\.[0-9]+)-win-x64\.zip$') { Fail 'Official Node.js 24 checksum list has no win-x64 runtime' }
+      $NodeVersion = $Matches[1]
+    }
+    $asset = "node-v$NodeVersion-win-x64.zip"
+    $archive = Join-Path $temp $asset
+    Invoke-WebRequest -UseBasicParsing -Uri "$base/$asset" -OutFile $archive
     $escaped = [regex]::Escape($asset)
     $line = Get-Content -LiteralPath $sums | Where-Object { $_ -match "^[0-9a-fA-F]{64}\s+\*?$escaped$" } | Select-Object -First 1
     if (-not $line) { Fail "Node.js SHASUMS256.txt does not contain $asset" }
@@ -131,8 +140,17 @@ if ($RuntimeBundle) {
 } else {
   $Version = (& $ReleaseTool resolve -ReleaseUrl $ReleaseUrl -Version $Version | Select-Object -Last 1).Trim()
   Stage 2 "Agent Helm ${Version}: exact-version install"
-  & $NpmCmd view "$Package@$Version" version --silent *> $null
-  $npmHasVersion = $LASTEXITCODE -eq 0
+  # Windows PowerShell 5.1 promotes native stderr to a terminating error when
+  # ErrorActionPreference is Stop. npm view returns nonzero for an unpublished
+  # exact version; that must lead to the matching GitHub Release fallback.
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'Continue'
+    & $NpmCmd view "$Package@$Version" version --silent *> $null
+    $npmHasVersion = $LASTEXITCODE -eq 0
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
   if ($npmHasVersion) {
     Write-Host "Installing stable $Package@$Version from npm..."
     & $NpmCmd install --prefix $Prefix "$Package@$Version" --no-audit --no-fund
@@ -179,7 +197,7 @@ if not exist "%~1" exit /b 0
 set "NODE_MAJOR="
 for /f "delims=" %%V in ('"%~1" -p "process.versions.node.split(String.fromCharCode(46))[0]" 2^>nul') do set "NODE_MAJOR=%%V"
 if not defined NODE_MAJOR exit /b 0
-if %NODE_MAJOR% GEQ 22 set "NODE_BIN=%~1"
+if %NODE_MAJOR% GEQ 24 set "NODE_BIN=%~1"
 exit /b 0
 "@
 [IO.File]::WriteAllText($Launcher, $launcherBody, [Text.UTF8Encoding]::new($false))
