@@ -2,7 +2,8 @@ param(
   [string]$Version = 'latest',
   [string]$ChromeExtensionId = $env:AGENT_HELM_CHROME_EXTENSION_ID,
   [string]$RuntimeBundle = $env:AGENT_HELM_RUNTIME_BUNDLE,
-  [string]$RuntimeBundleSha256 = $env:AGENT_HELM_RUNTIME_BUNDLE_SHA256
+  [string]$RuntimeBundleSha256 = $env:AGENT_HELM_RUNTIME_BUNDLE_SHA256,
+  [string]$ReleaseManifestPath = ''
 )
 
 Set-StrictMode -Version Latest
@@ -29,7 +30,13 @@ if ($arch -notin @('AMD64', 'x64', 'X64')) {
 }
 
 function Get-RemoteScript([string]$Uri) {
-  $source = (Invoke-WebRequest -UseBasicParsing -Uri $Uri).Content
+  $response = Invoke-WebRequest -UseBasicParsing -Uri $Uri
+  $source = if ($response.Content -is [byte[]]) {
+    [System.Text.Encoding]::UTF8.GetString($response.Content)
+  } else {
+    [string]$response.Content
+  }
+  $source = $source.TrimStart([char]0xFEFF)
   if ([string]::IsNullOrWhiteSpace($source)) { Fail "downloaded script is empty: $Uri" }
   return [scriptblock]::Create($source)
 }
@@ -138,34 +145,46 @@ if ($RuntimeBundle) {
     Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction SilentlyContinue
   }
 } else {
-  $Version = (& $ReleaseTool resolve -ReleaseUrl $ReleaseUrl -Version $Version | Select-Object -Last 1).Trim()
-  Stage 2 "Agent Helm ${Version}: exact-version install"
-  # Windows PowerShell 5.1 promotes native stderr to a terminating error when
-  # ErrorActionPreference is Stop. npm view returns nonzero for an unpublished
-  # exact version; that must lead to the matching GitHub Release fallback.
-  $previousErrorActionPreference = $ErrorActionPreference
-  try {
-    $ErrorActionPreference = 'Continue'
-    & $NpmCmd view "$Package@$Version" version --silent *> $null
-    $npmHasVersion = $LASTEXITCODE -eq 0
-  } finally {
-    $ErrorActionPreference = $previousErrorActionPreference
+  # The same verified Core manifest is used by resolve and GitHub tgz
+  # fallback. Chrome can supply its pinned snapshot; standalone installs
+  # create a disposable snapshot and clean it after the install.
+  $manifestDirectory = if ($ReleaseManifestPath) { $null } else {
+    Join-Path ([System.IO.Path]::GetTempPath()) ("agent-helm-manifest-" + [guid]::NewGuid().ToString('N'))
   }
-  if ($npmHasVersion) {
-    Write-Host "Installing stable $Package@$Version from npm..."
-    & $NpmCmd install --prefix $Prefix "$Package@$Version" --no-audit --no-fund
-    if ($LASTEXITCODE -ne 0) { Fail "npm install failed for $Package@$Version" }
-  } else {
-    $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("agent-helm-release-" + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $temp -Force | Out-Null
+  if ($manifestDirectory) { New-Item -ItemType Directory -Path $manifestDirectory -Force | Out-Null }
+  $manifestPath = if ($ReleaseManifestPath) { $ReleaseManifestPath } else { Join-Path $manifestDirectory 'release-manifest.json' }
+  try {
+    $Version = (& $ReleaseTool resolve -ReleaseUrl $ReleaseUrl -Version $Version -ManifestPath $manifestPath | Select-Object -Last 1).Trim()
+    Stage 2 "Agent Helm ${Version}: exact-version install"
+    # Windows PowerShell 5.1 promotes native stderr to a terminating error when
+    # ErrorActionPreference is Stop. npm view returns nonzero for an unpublished
+    # exact version; that must lead to the matching GitHub Release fallback.
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
-      $archive = Join-Path $temp 'agent-helm.tgz'
-      & $ReleaseTool download -ReleaseUrl $ReleaseUrl -Version $Version -ArtifactId 'agent-helm-package' -Output $archive
-      & $NpmCmd install --prefix $Prefix $archive --no-audit --no-fund
-      if ($LASTEXITCODE -ne 0) { Fail "local GitHub tgz install failed for Agent Helm $Version" }
+      $ErrorActionPreference = 'Continue'
+      & $NpmCmd view "$Package@$Version" version --silent *> $null
+      $npmHasVersion = $LASTEXITCODE -eq 0
     } finally {
-      Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
+      $ErrorActionPreference = $previousErrorActionPreference
     }
+    if ($npmHasVersion) {
+      Write-Host "Installing stable $Package@$Version from npm..."
+      & $NpmCmd install --prefix $Prefix "$Package@$Version" --no-audit --no-fund
+      if ($LASTEXITCODE -ne 0) { Fail "npm install failed for $Package@$Version" }
+    } else {
+      $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("agent-helm-release-" + [guid]::NewGuid().ToString('N'))
+      New-Item -ItemType Directory -Path $temp -Force | Out-Null
+      try {
+        $archive = Join-Path $temp 'agent-helm.tgz'
+        & $ReleaseTool download -ReleaseUrl $ReleaseUrl -Version $Version -ArtifactId 'agent-helm-package' -Output $archive -ManifestPath $manifestPath
+        & $NpmCmd install --prefix $Prefix $archive --no-audit --no-fund
+        if ($LASTEXITCODE -ne 0) { Fail "local GitHub tgz install failed for Agent Helm $Version" }
+      } finally {
+        Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
+      }
+    }
+  } finally {
+    if ($manifestDirectory) { Remove-Item -LiteralPath $manifestDirectory -Recurse -Force -ErrorAction SilentlyContinue }
   }
 }
 
@@ -185,19 +204,26 @@ if defined AGENT_HELM_NODE call :use_node_if_compatible "%AGENT_HELM_NODE%"
 if not defined NODE_BIN call :use_node_if_compatible "%MANAGED_NODE%"
 if not defined NODE_BIN for /f "delims=" %%I in ('where node.exe 2^>nul') do if not defined NODE_BIN call :use_node_if_compatible "%%I"
 if not defined NODE_BIN call :use_node_if_compatible "%FALLBACK_NODE%"
-if not defined NODE_BIN exit /b 127
+if not defined NODE_BIN (
+  echo agent-helm: Node.js 24 executable could not be resolved by the Windows launcher. 1>&2
+  exit /b 127
+)
 set "CLI_PATH=%CLI_JS%"
 if defined AGENT_HELM_CLI if exist "%AGENT_HELM_CLI%" set "CLI_PATH=%AGENT_HELM_CLI%"
-if not exist "%CLI_PATH%" exit /b 127
+if not exist "%CLI_PATH%" (
+  echo agent-helm: CLI file does not exist: "%CLI_PATH%" 1>&2
+  exit /b 127
+)
 "%NODE_BIN%" "%CLI_PATH%" %*
 exit /b %errorlevel%
 
 :use_node_if_compatible
 if not exist "%~1" exit /b 0
-set "NODE_MAJOR="
-for /f "delims=" %%V in ('"%~1" -p "process.versions.node.split(String.fromCharCode(46))[0]" 2^>nul') do set "NODE_MAJOR=%%V"
-if not defined NODE_MAJOR exit /b 0
-if %NODE_MAJOR% EQU 24 set "NODE_BIN=%~1"
+rem Check the executable directly. FOR /F's nested cmd.exe quote handling
+rem can swallow quoted node.exe paths and leave NODE_BIN unset (exit 127).
+"%~1" -e "process.exit(process.versions.node.split('.')[0]==='24'?0:1)" >nul 2>nul
+if errorlevel 1 exit /b 0
+set "NODE_BIN=%~1"
 exit /b 0
 "@
 [IO.File]::WriteAllText($Launcher, $launcherBody, [Text.UTF8Encoding]::new($false))
@@ -216,7 +242,7 @@ Stage 3 "CLI launcher: $Launcher"
 if (-not [string]::IsNullOrWhiteSpace($ChromeExtensionId)) {
   Stage 4 "Native Messaging bridge: $ChromeExtensionId"
   & $Launcher install-chrome-native-host --extension-id $ChromeExtensionId
-  if ($LASTEXITCODE -ne 0) { Fail 'Chrome Native Messaging bridge registration failed' }
+  if ($LASTEXITCODE -ne 0) { Fail "Chrome Native Messaging bridge registration failed (CLI launcher exit $LASTEXITCODE)" }
   return
 }
 
