@@ -243,6 +243,11 @@ if (-not [string]::IsNullOrWhiteSpace($ChromeExtensionId)) {
   Stage 4 "Native Messaging bridge: $ChromeExtensionId"
   & $Launcher install-chrome-native-host --extension-id $ChromeExtensionId
   if ($LASTEXITCODE -ne 0) { Fail "Chrome Native Messaging bridge registration failed (CLI launcher exit $LASTEXITCODE)" }
+  # Chrome's staged installer does not run the generic setup, which handles
+  # Tunnel credentials and Serena separately. Provision only command sandbox
+  # here, with explicit user confirmation/UAC, before reporting Core ready.
+  & $Launcher setup sandbox
+  if ($LASTEXITCODE -ne 0) { Fail "Execution sandbox is not ready; run $Launcher setup sandbox and check the diagnostic above" }
   return
 }
 
