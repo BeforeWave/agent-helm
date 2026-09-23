@@ -13,7 +13,7 @@ $ReleaseUrl = 'https://github.com/BeforeWave/agent-helm/releases'
 $ReleaseToolUrl = if ($env:BEFOREWAVE_RELEASE_TOOL_URL) { $env:BEFOREWAVE_RELEASE_TOOL_URL } else { 'https://raw.githubusercontent.com/BeforeWave/agent-helm/main/install-release.ps1' }
 $Prefix = if ($env:AGENT_HELM_INSTALL_PREFIX) { $env:AGENT_HELM_INSTALL_PREFIX } else { Join-Path $HOME '.agent-helm\npm' }
 $NodeVersion = if ($env:AGENT_HELM_NODE_VERSION) { $env:AGENT_HELM_NODE_VERSION } else { '' }
-$MinNodeMajor = 24
+$RequiredNodeMajor = 24
 $AgentHome = Join-Path $HOME '.agent-helm'
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { Fail 'this installer supports Windows only' }
 $BinRoot = Join-Path $AgentHome 'bin'
@@ -41,7 +41,7 @@ function Get-NodeMajor([string]$NodePath) {
 }
 
 function Test-Node([string]$NodePath) {
-  return (-not [string]::IsNullOrWhiteSpace($NodePath)) -and (Test-Path -LiteralPath $NodePath -PathType Leaf) -and ((Get-NodeMajor $NodePath) -ge $MinNodeMajor)
+  return (-not [string]::IsNullOrWhiteSpace($NodePath)) -and (Test-Path -LiteralPath $NodePath -PathType Leaf) -and ((Get-NodeMajor $NodePath) -eq $RequiredNodeMajor)
 }
 
 function Find-SystemNode {
@@ -197,7 +197,7 @@ if not exist "%~1" exit /b 0
 set "NODE_MAJOR="
 for /f "delims=" %%V in ('"%~1" -p "process.versions.node.split(String.fromCharCode(46))[0]" 2^>nul') do set "NODE_MAJOR=%%V"
 if not defined NODE_MAJOR exit /b 0
-if %NODE_MAJOR% GEQ 24 set "NODE_BIN=%~1"
+if %NODE_MAJOR% EQU 24 set "NODE_BIN=%~1"
 exit /b 0
 "@
 [IO.File]::WriteAllText($Launcher, $launcherBody, [Text.UTF8Encoding]::new($false))
