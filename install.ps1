@@ -209,7 +209,7 @@ if not defined NODE_BIN (
   exit /b 127
 )
 set "CLI_PATH=%CLI_JS%"
-if defined AGENT_HELM_CLI if exist "%AGENT_HELM_CLI%" set "CLI_PATH=%AGENT_HELM_CLI%"
+rem Public CLI always executes the installed package; only the Chrome Native Host supports AGENT_HELM_CLI override.
 if not exist "%CLI_PATH%" (
   echo agent-helm: CLI file does not exist: "%CLI_PATH%" 1>&2
   exit /b 127
