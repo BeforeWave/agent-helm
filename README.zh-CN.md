@@ -8,8 +8,12 @@
 
 **告别复制粘贴与 Token 额度焦虑！让网页版 ChatGPT 直连本地项目、运行代码，按需调度本地 Agent。**
 
+**原生支持 macOS 和 Windows x64：** Windows 可直接通过 SRT 沙箱执行本地命令，无需安装 WSL2。
+
 [![npm](https://img.shields.io/npm/v/@beforewave/agent-helm?color=blue\&style=flat-square)](https://www.npmjs.com/package/@beforewave/agent-helm)
 [![License](https://img.shields.io/github/license/BeforeWave/agent-helm?style=flat-square)](./LICENSE)
+![macOS](https://img.shields.io/badge/macOS-supported-2ea44f?style=flat-square)
+![Windows](https://img.shields.io/badge/Windows-supported-2ea44f?style=flat-square)
 
 </div>
 

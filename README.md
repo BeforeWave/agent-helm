@@ -8,9 +8,13 @@
 
 **Say goodbye to copy-pasting and Token quota anxiety. Let ChatGPT on the web connect directly to your local projects, run code, and call local Coding Agents when needed.**
 
+**Native macOS and Windows x64 support:** Run local commands on Windows through the SRT sandbox without installing WSL2.
+
 
 [![npm](https://img.shields.io/npm/v/@beforewave/agent-helm?color=blue\&style=flat-square)](https://www.npmjs.com/package/@beforewave/agent-helm)
 [![License](https://img.shields.io/github/license/BeforeWave/agent-helm?style=flat-square)](./LICENSE)
+![macOS](https://img.shields.io/badge/macOS-supported-2ea44f?style=flat-square)
+![Windows](https://img.shields.io/badge/Windows-supported-2ea44f?style=flat-square)
 
 </div>
 <p align="center">
