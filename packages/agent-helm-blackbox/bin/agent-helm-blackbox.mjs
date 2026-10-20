@@ -624,7 +624,7 @@ try {
       'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' broad=' + resultDetail(broadAllowedRead) + ' credentialRead=' + resultDetail(credentialRead) + ' credentialWrite=' + resultDetail(credentialWrite) + ' configRead=' + resultDetail(configRead) + ' configWrite=' + resultDetail(configWrite),
     )
   }
-  const destructive = await call('command_execute', { context_id: contextId, command: 'git reset --hard HEAD~1', purpose: 'Verify MCP destructive command guardrail' }, { validate: false })
+  const destructive = await call('command_execute', { context_id: contextId, command: `rm -rf ./agent-helm-blackbox-nonexistent-${randomBytes(8).toString('hex')}`, purpose: 'Verify MCP destructive command guardrail' }, { validate: false })
   check('command_execute exposes the destructive-command guardrail through MCP', destructive.isError === true && errorCode(destructive) === 'destructive_command_denied', errorCode(destructive) ?? '')
   }
 

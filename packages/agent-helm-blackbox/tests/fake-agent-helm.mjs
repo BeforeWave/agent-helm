@@ -181,7 +181,7 @@ function protocol() {
       if (configuredCredentialFile && command.includes('fs.writeFileSync') && command.includes(configuredCredentialFile)) return commandOutput('denied:EPERM\n')
       if (command.startsWith('cat ') && configuredFilesystemAllow.some((root) => command.includes(root))) return commandOutput('ordinary\n')
       if (command.startsWith('cat ')) return toolError('shell_path_not_allowed')
-      if (command === 'git reset --hard HEAD~1') return toolError('destructive_command_denied')
+      if (/^rm -rf \.\/agent-helm-blackbox-nonexistent-[0-9a-f]{16}$/.test(command)) return toolError('destructive_command_denied')
     }
     return toolError('unexpected_tool_call')
   })
