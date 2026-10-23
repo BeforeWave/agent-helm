@@ -225,7 +225,9 @@ stage 3 "CLI launcher: $CLI_LAUNCHER"
 if [ -n "${AGENT_HELM_CHROME_EXTENSION_ID:-}" ]; then
   stage 4 "Native Messaging bridge: ${AGENT_HELM_CHROME_EXTENSION_ID}"
   printf "%s\n" "Agent Helm installed. Registering the Chrome bridge for ${AGENT_HELM_CHROME_EXTENSION_ID}..."
-  exec "$CLI_LAUNCHER" install-chrome-native-host --extension-id "$AGENT_HELM_CHROME_EXTENSION_ID"
+  "$CLI_LAUNCHER" install-chrome-native-host --extension-id "$AGENT_HELM_CHROME_EXTENSION_ID"
+  # Chrome skips generic setup. Still require SRT backend preflight, as on Windows.
+  exec "$CLI_LAUNCHER" setup sandbox --if-required
 fi
 
 stage 4 "Setup"
