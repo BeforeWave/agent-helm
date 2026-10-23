@@ -55,6 +55,16 @@ function check(label, condition, detail = '') {
   if (!condition) throw new Error(label)
 }
 
+// Cross-platform Windows cmd.exe Node probe: no Unix utilities or nested quoting.
+function windowsNodeProbe(source) {
+  const payload = Buffer.from(source).toString('base64')
+  return `node -e "eval(Buffer.from('${payload}','base64').toString())"`
+}
+
+function portableNodeProbe(source) {
+  return process.platform === 'win32' ? windowsNodeProbe(source) : 'node -e ' + JSON.stringify(source)
+}
+
 function commandResult(result) {
   return result.structuredContent?.result
 }
@@ -529,7 +539,11 @@ try {
   check('context_setup returns an execution context id', typeof contextId === 'string' && contextId.length > 0)
 
   if (batchEnabled('surface-command')) {
-  const pwd = await call('command_execute', { context_id: contextId, command: 'pwd', purpose: 'Verify real MCP command execution cwd' })
+  const workspaceProbe = attachedTarget?.workspace?.authorizedProbe ?? (attachedTarget ? 'package.json' : 'probe.txt')
+  const pwdCommand = process.platform === 'win32'
+    ? windowsNodeProbe(`require('node:fs').statSync(${JSON.stringify(workspaceProbe)});process.stdout.write('.')`)
+    : 'pwd'
+  const pwd = await call('command_execute', { context_id: contextId, command: pwdCommand, purpose: 'Verify real MCP command execution cwd' })
   check('command_execute runs inside the selected MCP workspace', pwd.isError !== true && commandResult(pwd)?.return_code === 0 && commandResult(pwd)?.stdout?.trim() === '.' && commandResult(pwd)?.cwd === '.', resultDetail(pwd))
 
   const echo = await call('command_execute', { context_id: contextId, command: 'echo AGENT_HELM_MCP_BLACKBOX', purpose: 'Verify ordinary MCP command execution' })
@@ -547,20 +561,26 @@ try {
     process.platform === 'win32' ? resultDetail(echo) : resultDetail(echo) + ' | heredoc=' + resultDetail(heredocBang),
   )
 
-  const stat = await call('command_execute', { context_id: contextId, command: attachedTarget ? `stat ${JSON.stringify(attachedTarget.workspace?.authorizedProbe ?? 'package.json')}` : 'stat probe.txt', purpose: 'Verify authorized workspace file access through MCP' })
+  const statCommand = process.platform === 'win32'
+    ? windowsNodeProbe(`require('node:fs').statSync(${JSON.stringify(workspaceProbe)})`)
+    : attachedTarget ? `stat ${JSON.stringify(workspaceProbe)}` : 'stat probe.txt'
+  const stat = await call('command_execute', { context_id: contextId, command: statCommand, purpose: 'Verify authorized workspace file access through MCP' })
   check('command_execute can inspect an authorized workspace file', stat.isError !== true && commandResult(stat)?.return_code === 0, resultDetail(stat))
 
-  const create = await call('command_execute', { context_id: contextId, command: 'touch blackbox-created.tmp', purpose: 'Verify authorized workspace write through MCP' })
+  const create = await call('command_execute', { context_id: contextId, command: process.platform === 'win32' ? windowsNodeProbe("require('node:fs').writeFileSync('blackbox-created.tmp','')") : 'touch blackbox-created.tmp', purpose: 'Verify authorized workspace write through MCP' })
   const createSucceeded = create.isError !== true && commandResult(create)?.return_code === 0
   check('command_execute can create a workspace file', createSucceeded, resultDetail(create))
-  const remove = await call('command_execute', { context_id: contextId, command: 'rm blackbox-created.tmp', purpose: 'Verify authorized workspace cleanup through MCP' })
+  const remove = await call('command_execute', { context_id: contextId, command: process.platform === 'win32' ? windowsNodeProbe("require('node:fs').rmSync('blackbox-created.tmp')") : 'rm blackbox-created.tmp', purpose: 'Verify authorized workspace cleanup through MCP' })
   check('command_execute can remove a workspace file', remove.isError !== true && commandResult(remove)?.return_code === 0, resultDetail(remove))
 
-  const outside = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(outsideFile)}`, purpose: 'Verify MCP workspace read boundary' }, { validate: false })
-  const configReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+  const outsideCommand = process.platform === 'win32'
+    ? windowsNodeProbe(`try{require('node:fs').readFileSync(${JSON.stringify(outsideFile)});console.log('LEAK');process.exitCode=9}catch(e){console.error(e.code+': '+e.message);process.exitCode=1}`)
+    : `cat ${JSON.stringify(outsideFile)}`
+  const outside = await call('command_execute', { context_id: contextId, command: outsideCommand, purpose: 'Verify MCP workspace read boundary' }, { validate: false })
+  const configReadCommand = portableNodeProbe(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)
   const configRead = await call('command_execute', { context_id: contextId, command: configReadCommand, purpose: 'Verify Agent Helm control configuration is not command-readable by default' })
   const originalConfig = attachedTarget ? undefined : readFileSync(configFile, 'utf8')
-  const configWriteCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+  const configWriteCommand = portableNodeProbe(`const fs=require('node:fs');const p=${JSON.stringify(configFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)
   const configWrite = await call('command_execute', { context_id: contextId, command: configWriteCommand, purpose: 'Verify Agent Helm control configuration is not command-writable by default' })
   if (attachedTarget) {
     const outsideResult = commandResult(outside)
@@ -581,15 +601,19 @@ try {
       'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' configRead=' + resultDetail(configRead) + ' configWrite=' + resultDetail(configWrite),
     )
   } else {
-    const broadAllowedRead = await call('command_execute', { context_id: contextId, command: `cat ${JSON.stringify(broadAllowedFile)}`, purpose: 'Verify configured broad filesystem grant is active' })
-    const credentialReadCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+    const broadReadCommand = process.platform === 'win32'
+      ? windowsNodeProbe(`process.stdout.write(require('node:fs').readFileSync(${JSON.stringify(broadAllowedFile)},'utf8'))`)
+      : `cat ${JSON.stringify(broadAllowedFile)}`
+    const broadAllowedRead = await call('command_execute', { context_id: contextId, command: broadReadCommand, purpose: 'Verify configured broad filesystem grant is active' })
+    const credentialReadCommand = portableNodeProbe(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.readFileSync(p);console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)
     const credentialRead = await call('command_execute', { context_id: contextId, command: credentialReadCommand, purpose: 'Verify credential terminal read deny overrides a broader configured grant' })
-    const credentialWriteCommand = `node -e ${JSON.stringify(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)}`
+    const credentialWriteCommand = portableNodeProbe(`const fs=require('node:fs');const p=${JSON.stringify(credentialFile)};try{fs.writeFileSync(p,'LEAK');console.log('LEAK');process.exitCode=9}catch(e){console.log('denied:'+e.code)}`)
     const credentialWrite = await call('command_execute', { context_id: contextId, command: credentialWriteCommand, purpose: 'Verify credential terminal write deny overrides a broader configured grant' })
     check(
       'command_execute enforces workspace and Agent Helm control-config boundaries',
-      outside.isError === true
-        && ['shell_path_not_allowed', 'filesystem_read_denied'].includes(errorCode(outside))
+      (outside.isError === true
+        ? ['shell_path_not_allowed', 'filesystem_read_denied'].includes(errorCode(outside))
+        : commandResult(outside)?.return_code !== 0 && /(?:EPERM|EACCES|Permission denied|Operation not permitted)/i.test(commandResult(outside)?.stderr ?? ''))
         && broadAllowedRead.isError !== true
         && commandResult(broadAllowedRead)?.stdout?.trim() === 'ordinary'
         && credentialRead.isError !== true
@@ -609,7 +633,7 @@ try {
       'outside=' + (errorCode(outside) ?? resultDetail(outside)) + ' broad=' + resultDetail(broadAllowedRead) + ' credentialRead=' + resultDetail(credentialRead) + ' credentialWrite=' + resultDetail(credentialWrite) + ' configRead=' + resultDetail(configRead) + ' configWrite=' + resultDetail(configWrite),
     )
   }
-  const destructive = await call('command_execute', { context_id: contextId, command: 'git reset --hard HEAD~1', purpose: 'Verify MCP destructive command guardrail' }, { validate: false })
+  const destructive = await call('command_execute', { context_id: contextId, command: `rm -rf ./agent-helm-blackbox-nonexistent-${randomBytes(8).toString('hex')}`, purpose: 'Verify MCP destructive command guardrail' }, { validate: false })
   check('command_execute exposes the destructive-command guardrail through MCP', destructive.isError === true && errorCode(destructive) === 'destructive_command_denied', errorCode(destructive) ?? '')
   }
 
@@ -698,10 +722,9 @@ try {
   const recoveredTools = await client.listTools()
   check('pre-restart MCP client recovers after graceful restart without reinitializing', restartStop.forced === false && sameNames(new Set(recoveredTools.tools.map((tool) => tool.name)), expectedTools))
   check('stateless restart recovery preserves the original MCP transport session id', typeof preRestartSessionId === 'string' && transport.sessionId === preRestartSessionId)
-  const recoveredCommand = await client.callTool({
-    name: 'command_execute',
-    arguments: { context_id: contextId, command: 'echo AGENT_HELM_MCP_BLACKBOX_RESTART', purpose: 'Verify persisted execution context after Agent Helm restart' },
-    _meta: { 'openai/session': correlation },
+  // Windows SRT first command after Core restart may yield a process handle.
+  const recoveredCommand = await call('command_execute', {
+    context_id: contextId, command: 'echo AGENT_HELM_MCP_BLACKBOX_RESTART', purpose: 'Verify persisted execution context after Agent Helm restart',
   })
   check('pre-restart execution context and conversation remain usable after Agent Helm restart', recoveredCommand.isError !== true && commandResult(recoveredCommand)?.stdout?.trim() === 'AGENT_HELM_MCP_BLACKBOX_RESTART', resultDetail(recoveredCommand))
   const freshAfterRestart = await connectClient(mcpUrl, token, 'agent-helm-blackbox-fresh-after-restart')

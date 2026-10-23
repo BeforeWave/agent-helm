@@ -57,7 +57,12 @@ fetch_manifest() {
 manifest_field() {
   manifest=$1
   field=$2
+  fallback_field=${3:-}
   line=$(grep -m 1 "\"$field\"[[:space:]]*:" "$manifest" || true)
+  if [ -z "$line" ] && [ -n "$fallback_field" ]; then
+    field=$fallback_field
+    line=$(grep -m 1 "\"$field\"[[:space:]]*:" "$manifest" || true)
+  fi
   value=$(printf '%s\n' "$line" | sed -n "s/.*\"$field\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p")
   [ -n "$value" ] || fail "release manifest does not contain string field $field."
   printf '%s\n' "$value"
@@ -82,6 +87,7 @@ release_url=''
 version=latest
 artifact_id=''
 field=''
+fallback_field=''
 output=''
 
 while [ "$#" -gt 0 ]; do
@@ -90,6 +96,7 @@ while [ "$#" -gt 0 ]; do
     --version) version=${2:-}; shift 2 ;;
     --artifact-id) artifact_id=${2:-}; shift 2 ;;
     --field) field=${2:-}; shift 2 ;;
+    --fallback-field) fallback_field=${2:-}; shift 2 ;;
     --output) output=${2:-}; shift 2 ;;
     *) fail "unknown option: $1" ;;
   esac
@@ -107,10 +114,11 @@ case "$command_name" in
   field)
     [ -n "$field" ] || fail "field command requires --field."
     case "$field" in *[!A-Za-z0-9_-]*) fail "--field contains unsupported characters." ;; esac
+    case "$fallback_field" in *[!A-Za-z0-9_-]*) fail "--fallback-field contains unsupported characters." ;; esac
     tmp=$(mktemp "${TMPDIR:-/tmp}/beforewave-release-manifest.XXXXXX")
     trap 'rm -f "$tmp"' EXIT HUP INT TERM
     fetch_manifest "$release_url" "$resolved" "$tmp"
-    manifest_field "$tmp" "$field"
+    manifest_field "$tmp" "$field" "$fallback_field"
     ;;
   download)
     [ -n "$artifact_id" ] || fail "download command requires --artifact-id."
