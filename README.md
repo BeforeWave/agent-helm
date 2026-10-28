@@ -135,6 +135,21 @@ agent-helm stop
 
 ---
 
+### Refresh ChatGPT Connector Tools After Upgrading
+
+When an Agent Helm upgrade changes the MCP tool schema or contract, open your ChatGPT Custom Connector and select **Refresh Tools**.
+
+1. Upgrade Agent Helm and restart Core.
+2. Open the ChatGPT Custom Connector connected to Agent Helm.
+3. Select **Refresh Tools**.
+4. Start a new conversation and verify the updated tools.
+
+This MCP Server Integration release replaces `external_mcp_search_tools` with `external_mcp_list_tools`, so **refreshing is required after upgrading**. If tools cannot be found, parameters no longer match or contract errors appear, first verify the running Core version and refresh the connector tools.
+
+Refreshing does not remove imported MCP servers or revoke their approvals.
+
+---
+
 ## 🛠️ What Can ChatGPT Do Directly?
 
 Agent Helm lets ChatGPT work with your real project instead of a code snippet pasted into a chat box.
@@ -202,6 +217,29 @@ Agent Helm can associate all of these with the same piece of work:
 Even when a task moves between ChatGPT and a local Agent multiple times, it can still be tracked as one continuous piece of work.
 
 A complete Work History viewing and management interface is available through [Agent Helm Extensions](https://github.com/BeforeWave/agent-helm-extensions).
+
+---
+
+## 🔌 MCP Server Integration — Reuse Your Existing MCP Servers
+
+Agent Helm lets ChatGPT reuse existing MCP servers configured in Codex or Claude, alongside local projects and coding agents, without creating a separate ChatGPT connector for every server.
+
+### Getting Started
+
+1. Open **MCP Servers → Discover MCPs** in the Chrome Extension or DSH and select **Scan**. You can also run `agent-helm mcp scan`.
+2. Select **Import** for the server you want to use.
+3. Provide any independently required environment values, HTTP credentials or authentication.
+4. Explicitly enable the server.
+5. Use its approved capabilities from ChatGPT.
+
+ChatGPT uses `external_mcp_list` → `external_mcp_list_tools` → `external_mcp_call` to list servers, inspect complete tool descriptions and input schemas, and select and invoke upstream tools. Catalogs support pagination. Agent Helm does not perform semantic tool selection or register every upstream tool in the static ChatGPT tool list.
+
+### Permissions and Isolation
+
+- Scan and Import never automatically grant execution approval.
+- Agent Helm independently owns imported server configurations.
+- Private source-client credentials from Codex or Claude are never implicitly reused.
+- Disabling a server prevents further calls.
 
 ---
 

@@ -134,6 +134,21 @@ agent-helm stop
 
 ---
 
+### 升级后刷新 ChatGPT Connector Tools
+
+当 Agent Helm 升级涉及 MCP Tool Schema 或 Contract 变化时，需要在 ChatGPT 自定义 Connector 中执行 **Refresh Tools**，重新获取工具定义。
+
+1. 更新 Agent Helm 并重启 Core。
+2. 打开 ChatGPT 中连接 Agent Helm 的自定义 Connector。
+3. 执行 **Refresh Tools**。
+4. 重新进入对话，检查新版工具是否可用。
+
+本次 MCP Server Integration 已把 `external_mcp_search_tools` 替换成 `external_mcp_list_tools`，**升级后必须刷新一次**。如果出现 Tool not found、输入参数不匹配、旧工具仍然存在或 Contract 不一致，先核对 Core 版本和 Connector 工具定义。
+
+Refresh Tools 不会删除已导入的 MCP Server，也不会撤销授权。
+
+---
+
 ## 🛠️ ChatGPT 可以直接做什么？
 
 Agent Helm 让 ChatGPT 面对的是你的真实项目，而不是复制进聊天框的代码片段。
@@ -201,6 +216,29 @@ Agent Helm 可以把一次工作中的这些内容关联起来：
 即使任务在 ChatGPT 和本地 Agent 之间多次切换，也可以作为同一项工作持续追踪。
 
 完整的 Work History 查看和管理界面可以通过 [Agent Helm Extensions](https://github.com/BeforeWave/agent-helm-extensions) 使用。
+
+---
+
+## 🔌 MCP Server Integration — 复用已有 MCP Server
+
+Agent Helm 让 ChatGPT 不仅能使用本地项目和 Coding Agent，也能复用本机已在 Codex 或 Claude 中配置的 MCP Server，无需在 ChatGPT 为每个 Server 单独建立 Connector。
+
+### 使用流程
+
+1. 在 Chrome Extension 或 DSH 的 **MCP Servers → Discover MCPs** 中点击 **Scan**；也可以使用 `agent-helm mcp scan`。
+2. 找到需要的 Server 并点击 **Import**。
+3. 如有需要，填写环境变量、HTTP 凭据或认证信息。
+4. 明确启用该 MCP Server。
+5. 在 ChatGPT 中使用已授权的上游 MCP 能力。
+
+ChatGPT 通过 `external_mcp_list` → `external_mcp_list_tools` → `external_mcp_call` 读取 Server、查看完整工具描述和参数 Schema 并自行选择要调用的工具。目录支持分页，Agent Helm 不做语义搜索，也不会把所有上游工具直接注册到 ChatGPT 的静态工具目录。
+
+### 权限与隔离
+
+- Scan 和 Import 不会自动授权执行，启用需要明确操作。
+- 导入后的配置由 Agent Helm 独立管理。
+- 不会自动继承 Codex 或 Claude 的私有认证凭据。
+- 关闭授权后，ChatGPT 无法继续调用对应 Server。
 
 ---
 
