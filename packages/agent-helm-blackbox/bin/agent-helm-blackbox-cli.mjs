@@ -546,7 +546,12 @@ try {
     ? windowsNodeProbe(`require('node:fs').statSync(${JSON.stringify(workspaceProbe)});process.stdout.write('.')`)
     : 'pwd'
   const pwd = await call('command_execute', { context_id: contextId, command: pwdCommand, purpose: 'Verify real MCP command execution cwd' })
-  check('command_execute runs inside the selected MCP workspace', pwd.isError !== true && commandResult(pwd)?.return_code === 0 && commandResult(pwd)?.stdout?.trim() === '.' && commandResult(pwd)?.cwd === '.', resultDetail(pwd))
+  const pwdResult = commandResult(pwd)
+  check('command_execute runs inside the selected MCP workspace and preserves actual cwd',
+    pwd.isError !== true && pwdResult?.return_code === 0
+      && pwdResult?.cwd === workspace
+      && (process.platform === 'win32' ? pwdResult?.stdout?.trim() === '.' : pwdResult?.stdout?.trim() === workspace),
+    resultDetail(pwd))
 
   const echo = await call('command_execute', { context_id: contextId, command: 'echo AGENT_HELM_MCP_BLACKBOX', purpose: 'Verify ordinary MCP command execution' })
   let heredocBang
