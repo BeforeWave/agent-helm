@@ -137,7 +137,7 @@ function toolError(code) {
 }
 
 function commandOutput(stdout = '') {
-  return structured({ result: { stdout, stderr: '', return_code: 0, cwd: '.', truncated: false, stdout_original_length: stdout.length, stderr_original_length: 0 } })
+  return structured({ result: { stdout, stderr: '', return_code: 0, cwd: workspace.path, truncated: false, stdout_original_length: stdout.length, stderr_original_length: 0 } })
 }
 
 function protocol() {
@@ -165,7 +165,7 @@ function protocol() {
     if (name === 'agent_sessions_create') return toolError('agent_not_available')
     if (name === 'command_execute') {
       const command = String(input.command ?? '')
-      if (command === 'pwd') return commandOutput('.\n')
+      if (command === 'pwd') return commandOutput(workspace.path + '\n')
       if (command === 'echo AGENT_HELM_MCP_BLACKBOX') return commandOutput('AGENT_HELM_MCP_BLACKBOX\n')
       if (command.includes('heredoc-bang-ok')) return commandOutput('heredoc-bang-ok\n')
       if (command === 'echo AGENT_HELM_MCP_BLACKBOX_RESTART') return commandOutput('AGENT_HELM_MCP_BLACKBOX_RESTART\n')
