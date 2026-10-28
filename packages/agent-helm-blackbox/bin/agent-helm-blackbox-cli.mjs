@@ -481,8 +481,10 @@ try {
 
   const listed = await client.listTools()
   const tools = new Map(listed.tools.map((tool) => [tool.name, tool]))
-  const expectedTools = new Set(['context_setup', 'workspace_list', 'helm_status', 'command_execute', 'command_process_poll', 'command_process_stdin', 'command_process_signal', 'command_process_result'])
-  check('command-only profile advertises the exact expected MCP tool set', sameNames(tools.keys(), expectedTools), [...tools.keys()].join(', '))
+  const commandTools = new Set(['context_setup', 'workspace_list', 'helm_status', 'command_execute', 'command_process_poll', 'command_process_stdin', 'command_process_signal', 'command_process_result'])
+  const bridgeTools = new Set([...commandTools, 'external_mcp_list', 'external_mcp_list_tools', 'external_mcp_call'])
+  const expectedTools = sameNames(tools.keys(), commandTools) ? commandTools : bridgeTools
+  check('command profile advertises only the canonical tools, with optional complete External MCP bridge', sameNames(tools.keys(), expectedTools), [...tools.keys()].join(', '))
   check('every advertised MCP tool publishes input and output schemas', [...tools.values()].every((tool) => tool.inputSchema?.type === 'object' && tool.outputSchema?.type === 'object'))
 
   const validator = new AjvJsonSchemaValidator()

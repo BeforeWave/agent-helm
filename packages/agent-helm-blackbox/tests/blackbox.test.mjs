@@ -25,7 +25,7 @@ test('drives the supplied Agent Helm command only through its public MCP interfa
     })
     assert.equal(result.status, 0, result.stderr || result.stdout)
     assert.match(result.stdout, /real MCP client initializes a transport session/)
-    assert.match(result.stdout, /command-only profile advertises the exact expected MCP tool set/)
+    assert.match(result.stdout, /command profile advertises only the canonical tools, with optional complete External MCP bridge/)
     assert.match(result.stdout, /command_execute runs inside the selected MCP workspace/)
     assert.match(result.stdout, /quoted heredoc preserves literal exclamation through command_execute/)
     assert.match(result.stdout, /workspace and Agent Helm control-config boundaries/)
