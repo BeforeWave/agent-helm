@@ -349,37 +349,37 @@ async function runDynamicAccessStateScenario({ root, workspace }) {
     await waitForNotificationCount(() => toolListChanges, 3, 'Mutations disabled emits tools/list_changed on the existing MCP session')
     check('Mutations disabled emits tools/list_changed on the existing MCP session', toolListChanges >= 3, `count=${toolListChanges}`)
     const codingOffTools = new Set((await scenarioClient.listTools()).tools.map((tool) => tool.name))
-    check('Mutations disabled keeps semantic queries but removes semantic mutations on the same MCP session', codingOffTools.has('semantic_find_symbol') && !codingOffTools.has('semantic_rename_symbol'))
+    check('Mutations disabled preserves configured semantic queries and mutations in the advertised catalog', sameNames(codingOffTools, baselineNames) && codingOffTools.has('semantic_find_symbol') && codingOffTools.has('semantic_rename_symbol'))
     const staleMutation = await scenarioClient.callTool({
       name: 'semantic_rename_symbol',
       arguments: { context_id: contextId, name_path: 'sample', relative_path: 'sample.ts', new_name: 'renamed' },
       _meta: { 'openai/session': scenarioCorrelation },
     })
-    check('Mutations disabled gives stale cached mutation calls tool_not_available_on_surface', staleMutation.isError === true && errorCode(staleMutation) === 'tool_not_available_on_surface', errorCode(staleMutation) ?? '')
+    check('Mutations disabled rejects cached mutation calls at execution time', staleMutation.isError === true && errorCode(staleMutation) === 'mutation_not_allowed', errorCode(staleMutation) ?? '')
 
     await nativeControlRequest({ home: scenarioHome, socket: scenarioSocket, method: 'setExternalUserAccess', params: [{ mutations: true }] })
     await waitForNotificationCount(() => toolListChanges, 4, 'Mutations restored emit tools/list_changed on the existing MCP session')
     check('Mutations restored emit tools/list_changed on the existing MCP session', toolListChanges >= 4, `count=${toolListChanges}`)
     const codingRestoredTools = new Set((await scenarioClient.listTools()).tools.map((tool) => tool.name))
-    check('Mutations restored re-advertise semantic mutations on the same MCP session', codingRestoredTools.has('semantic_rename_symbol'))
+    check('Mutations restored preserves the configured semantic catalog on the same MCP session', sameNames(codingRestoredTools, baselineNames))
     const restoredMutation = await scenarioClient.callTool({
       name: 'semantic_rename_symbol',
       arguments: { context_id: contextId, name_path: 'sample', relative_path: 'sample.ts', new_name: 'renamed' },
       _meta: { 'openai/session': scenarioCorrelation },
     })
-    check('Restored mutations are no longer rejected as unavailable', errorCode(restoredMutation) !== 'tool_not_available_on_surface', errorCode(restoredMutation) ?? 'call accepted')
+    check('Restored mutations are no longer denied by runtime read-only policy', errorCode(restoredMutation) !== 'mutation_not_allowed', errorCode(restoredMutation) ?? 'call accepted')
 
     await nativeControlRequest({ home: scenarioHome, socket: scenarioSocket, method: 'setExternalUserAccess', params: [{ delegation: false }] })
     await waitForNotificationCount(() => toolListChanges, 5, 'Delegation disabled emits tools/list_changed on the existing MCP session')
     check('Delegation disabled emits tools/list_changed on the existing MCP session', toolListChanges >= 5, `count=${toolListChanges}`)
     const delegationOffTools = new Set((await scenarioClient.listTools()).tools.map((tool) => tool.name))
-    check('Delegation disabled removes delegated session tools on the same MCP session', !delegationOffTools.has('agent_sessions_create'))
+    check('Delegation disabled preserves configured session delegation tools in catalog', sameNames(delegationOffTools, baselineNames) && delegationOffTools.has('agent_sessions_create'))
     const staleDelegation = await scenarioClient.callTool({
       name: 'agent_sessions_create',
       arguments: { context_id: contextId, initial_message: 'must not run while delegation is disabled' },
       _meta: { 'openai/session': scenarioCorrelation },
     })
-    check('Delegation disabled gives stale cached delegation calls tool_not_available_on_surface', staleDelegation.isError === true && errorCode(staleDelegation) === 'tool_not_available_on_surface', errorCode(staleDelegation) ?? '')
+    check('Delegation disabled rejects cached delegation calls at execution time', staleDelegation.isError === true && errorCode(staleDelegation) === 'capability_unavailable', errorCode(staleDelegation) ?? '')
     const delegationOffStatus = await scenarioClient.callTool({ name: 'helm_status', arguments: {} })
     check('helm_status reports delegation disabled on the same MCP session', delegationOffStatus.isError !== true && delegationOffStatus.structuredContent?.capabilities?.delegation === false)
 
@@ -387,13 +387,13 @@ async function runDynamicAccessStateScenario({ root, workspace }) {
     await waitForNotificationCount(() => toolListChanges, 6, 'Delegation restored emits tools/list_changed on the existing MCP session')
     check('Delegation restored emits tools/list_changed on the existing MCP session', toolListChanges >= 6, `count=${toolListChanges}`)
     const delegationRestoredTools = new Set((await scenarioClient.listTools()).tools.map((tool) => tool.name))
-    check('Delegation restored re-advertises delegated session tools on the same MCP session', delegationRestoredTools.has('agent_sessions_create'))
+    check('Delegation restored keeps configured delegation tools in catalog', sameNames(delegationRestoredTools, baselineNames))
     const restoredDelegation = await scenarioClient.callTool({
       name: 'agent_sessions_create',
       arguments: { context_id: contextId, initial_message: 'probe restored delegation surface' },
       _meta: { 'openai/session': scenarioCorrelation },
     })
-    check('Restored delegation is no longer rejected as unavailable', errorCode(restoredDelegation) !== 'tool_not_available_on_surface', errorCode(restoredDelegation) ?? 'call accepted')
+    check('Restored delegation is no longer denied by runtime capability policy', errorCode(restoredDelegation) !== 'capability_unavailable', errorCode(restoredDelegation) ?? 'call accepted')
     check('all access transitions preserve the original MCP transport session', typeof sessionId === 'string' && connected.transport.sessionId === sessionId)
   } finally {
     await scenarioClient?.close().catch(() => {})
