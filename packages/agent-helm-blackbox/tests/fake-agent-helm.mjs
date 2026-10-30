@@ -121,9 +121,9 @@ function currentTools() {
   if (configured.command) tools.push(commandTool, ...commandProcessTools)
   if (configured.semantic) {
     tools.push(...semanticQueryTools)
-    if (!configured.read_only && access.mutations) tools.push(...semanticMutationTools)
+    if (!configured.read_only) tools.push(...semanticMutationTools)
   }
-  if (configured.delegate && access.delegation) tools.push(...delegationTools)
+  if (configured.delegate) tools.push(...delegationTools)
   return tools
 }
 
@@ -159,7 +159,9 @@ function protocol() {
       const denied = contextAccessError(input.context_id, correlation)
       if (denied) return toolError(denied)
     }
+    if ((name === 'agents_list' || name === 'agent_sessions_create') && !access.delegation) return toolError('capability_unavailable')
     if (name === 'semantic_find_symbol') return toolError('semantic_not_available')
+    if (name === 'semantic_rename_symbol' && !access.mutations) return toolError('mutation_not_allowed')
     if (name === 'semantic_rename_symbol') return toolError('semantic_not_available')
     if (name === 'agents_list') return structured({ agents: [] })
     if (name === 'agent_sessions_create') return toolError('agent_not_available')
